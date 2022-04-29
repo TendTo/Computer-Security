@@ -1,0 +1,54 @@
+(* handshake.pv
+
+Message 1: A -> B
+
+*)
+
+type key.
+type pk.
+type sk.
+type ssk.
+type spk.
+
+channel c, d[private].
+
+free s : bitstring[private].
+
+fun enc(bitstring, key): bitstring.
+reduc forall m: bitstring, k: key; dec(enc(m, k), k) = m.
+
+fun keyGen( sk ) : pk.
+fun aenc( bitstring, pk ) : bitstring.
+reduc forall m: bitstring, skX: sk; adec( aenc( m, keyGen( skX ) ), skX ) = m.
+
+fun sKeyGen( ssk ) : spk.
+fun sign( bitstring, ssk ) : bitstring.
+reduc forall m: bitstring, sskX: ssk; getMess(sign(m, sskX)) = m.
+reduc forall m: bitstring, sskX: ssk; verifySign( sign(m, sskX), m, sskX) = m.
+
+let clientA(pkA: pk , skA: sk , spkB: spk ) =
+    out( c , aenc( s,  pkA ) );
+    in( c , x: bitstring ).
+    (* let y = adec( x , skA ) in
+    let (=spkB , k: key ) = verifySign( y , spkB ) in
+    out( c , senc( s , k ) ) . *)
+
+let serverB(pkB : spk, skB: ssk) =
+    in( c, pkX: pk);
+    new k: key;
+    out( c, aenc( sign( ( pkB, k ), skB ), pkX )).
+    (* in( c, x: bitstring );
+    let z = dec( x, k ) in 0. *)
+
+
+query attacker(s).
+
+process
+    new skA : sk;
+    new sskB : ssk;
+    out( c, skA );
+    let pkA = keyGen( skA ) in out ( c , pkA );
+    let spkB = sKeyGen( sskB ) in out ( c , sskB );
+    clientA( pkA , skA , spkB )
+
+

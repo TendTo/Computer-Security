@@ -1,0 +1,111 @@
+(* https://bblanche.gitlabpages.inria.fr/proverif/manual.pdf - 74 
+
+0. ? -> A : pkB
+1. A -> B : {Na,pkA}pkB
+2. B -> A : {Na,Nb}pkA
+3. A -> B : {Nb}pkB
+
+*)
+
+channel c.
+
+(* Symmetric key encryption *)
+fun encrypt(bitstring, bitstring): bitstring.
+reduc forall m: bitstring, k: bitstring; decrypt(encrypt(m, k), k) = m.
+
+(* Asymmetric key encryption *)
+type pk.
+type sk.
+
+fun generatePk(sk): pk.
+fun aencrypt(bitstring, pk): bitstring.
+reduc forall m: bitstring, k: sk; adecrypt(aencrypt(m, generatePk(k)), k) = m.
+
+(* Signature *)
+type spk.
+type ssk.
+
+fun generateSpk(ssk): spk.
+fun sign(bitstring, ssk): bitstring.
+reduc forall m: bitstring, k: ssk; getMessage(sign(m, k)) = m.
+reduc forall m: bitstring, k: ssk; verify(sign(m, k), generateSpk(k)) = m.
+
+(* Hosts *)
+type host.
+free A, B: host.
+
+(* Key table *)
+table keys(host, pk).
+
+(* Events *)
+event beginA(host).
+event endA(host).
+event beginB(host).
+event endB(host).
+
+query x: host; inj-event(endB(x)) ==> inj-event(beginB(x)).
+query x: host; inj-event(endA(x)) ==> inj-event(beginA(x)).
+
+(* Check for secret nonce *)
+free secretANa , secretANb , secretBNa , secretBNb : bitstring[private].
+query attacker(secretANa);
+    attacker(secretANb);
+    attacker(secretBNa);
+    attacker(secretBNb).
+
+(* Protocol *)
+let processA(pkS: spk, skA: sk, skB: sk) = 
+    in(c, hostX: host);    (* 0 in *)
+    event beginB(hostX);
+    out(c, (A, hostX));
+    in(c, pkX: pk);       (* 1 out *)
+    in(c, ms: bitstring); (* 2 in *)
+    let (pkX: pk, =hostX) = verify(ms, pkS) in new Na: bitstring;
+    out(c, aencrypt((Na, A), pkX)); (* 3 out *)
+    in(c, m: bitstring);  (* 6 in *)
+    let (=Na, NX: bitstring) = adecrypt(m, skA) in 
+        out(c, aencrypt(NX, pkX)); (* 7 out *)
+    if hostX = B then
+        event endA(A);
+    out(c, encrypt(secretANa, Na));
+    out(c, encrypt(secretANb, NX)).
+
+let processB(pkS: spk, skA: sk, skB: sk) = 
+    in(c, m: bitstring);      (* 3 in *)
+    let (NY: bitstring, hostY: host) = adecrypt(m, skB) in event beginA(hostY);
+    out(c, (B, hostY));       (* 4 out *)
+    in(c, ms: bitstring);     (* 5 in *)
+    let (pkY: pk, =hostY) = verify(ms, pkS) in new Nb: bitstring;
+    out(c, aencrypt((NY, Nb), pkY)); (* 6 out *)
+    in(c, m3: bitstring);     (* 7 in *)
+    if Nb = adecrypt(m3, skB) then
+        if hostY = A then
+            event endB(B);
+    out(c, encrypt(secretBNa, NY));
+    out(c, encrypt(secretBNb, Nb)).
+
+let processS(skS: ssk) =
+    in(c, (a: host, b: host));
+    get keys(=b, sb) in out(c, sign((sb, b), skS)).
+
+let processK =
+    in(c, (h: host, k: pk));
+    if h <> A && h <> B then
+        insert keys(h, k).
+
+process
+    (* Setup A *)
+    new skA: sk;
+    let pkA = generatePk(skA) in out(c, pkA);
+    insert keys(A, pkA);
+    (* Setup B *)
+    new skB: sk;
+    let pkB = generatePk(skB) in out(c, pkB);
+    insert keys(B, pkB);
+    (* Setup signature key *)
+    new skS: ssk;
+    let pkS = generateSpk(skS) in out(c, pkS);
+    (( ! processA(pkS, skA, skB) ) 
+    | ( ! processB(pkS, skA, skB) ) 
+    | ( ! processS(skS) ) 
+    | ( ! processK ))

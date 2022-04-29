@@ -1,0 +1,80 @@
+(* https://bblanche.gitlabpages.inria.fr/proverif/manual.pdf - 74 
+
+0. ? -> A : pkB
+1. A -> B : {Na,pkA}pkB
+2. B -> A : {Na,Nb}pkA
+3. A -> B : {Nb}pkB
+
+*)
+
+channel c.
+
+(* Symmetric key encryption *)
+fun encrypt(bitstring, bitstring): bitstring.
+reduc forall m: bitstring, k: bitstring; decrypt(encrypt(m, k), k) = m.
+
+(* Asymmetric key encryption *)
+type pk.
+type sk.
+
+fun generatePk(sk): pk.
+fun aencrypt(bitstring, pk): bitstring.
+reduc forall m: bitstring, k: sk; adecrypt(aencrypt(m, generatePk(k)), k) = m.
+
+(* Signature *)
+type spk.
+type ssk.
+
+fun generateSpk(ssk): spk.
+fun sign(bitstring, ssk): bitstring.
+reduc forall m: bitstring, k: ssk; getMessage(sign(m, k)) = m.
+reduc forall m: bitstring, k: ssk; verify(sign(m, k), generateSpk(k)) = m.
+
+(* Events *)
+event beginA(pk).
+event endA(pk).
+event beginB(pk).
+event endB(pk).
+
+query x: pk; inj-event(endB(x)) ==> inj-event(beginB(x)).
+query x: pk; inj-event(endA(x)) ==> inj-event(beginA(x)).
+
+(* Check for secret nonce *)
+free secretANa , secretANb , secretBNa , secretBNb : bitstring[private].
+query attacker(secretANa);
+    attacker(secretANb);
+    attacker(secretBNa);
+    attacker(secretBNb);
+    attacker(a).
+
+(* Protocol *)
+let processA(pkB: pk, skA: sk) = 
+    in(c, pkX: pk); (* 0 in *)
+    event beginB(pkX);
+    new Na: bitstring;
+    let pkA = generatePk(skA) in out(c, aencrypt((Na, pkA), pkX)); (* 1 out *)
+    in(c, m: bitstring); (* 2 in *)
+    let (=Na, NX: bitstring) = adecrypt(m, skA) in out(c, aencrypt(NX, pkX)); (* 3 out *)
+    if pkX = pkB then 
+        let pkA = generatePk(skA) in event endA(pkA);
+    out(c, encrypt(secretANa, Na));
+    out(c, encrypt(secretANb, NX)).
+
+let processB(pkA: pk, skB: sk) = 
+    in(c, m: bitstring); (* 1 in *)
+    let (NY: bitstring, pkY: pk) = adecrypt(m, skB) in event beginA(pkY);
+    new Nb: bitstring;
+    out(c, aencrypt((NY, Nb), pkY)); (* 2 out *)
+    in(c, m3: bitstring); (* 3 in *)
+    if Nb = adecrypt(m3, skB) then
+        if pkY = pkA then 
+            event endB(generatePk(skB));
+    out(c, encrypt(secretBNa, NY));
+    out(c, encrypt(secretBNb, Nb)).
+
+process
+    new skA: sk;
+    let pkA = generatePk(skA) in out(c, pkA);
+    new skB: sk;
+    let pkB = generatePk(skB) in out(c, pkB);
+    (( ! processA(pkB, skA) ) | ( ! processB(pkA, skB) ))

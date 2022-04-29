@@ -1,0 +1,29 @@
+(* event.pv
+
+Message 1: A -> B : RSA \
+    if (message == Cocks) then
+        event RSA
+        event Cocks
+    else
+        event RSA
+
+*)
+
+channel c. (* free c : channel. *)
+free Cocks : bitstring[private].
+free RSA : bitstring[private].
+
+event evCocks.
+event evRSA.
+
+query event(evCocks) ==> event(evRSA).
+query event (evCocks).
+
+process
+    out(c, RSA);
+    in(c, x:bitstring);
+    if x = Cocks then
+        event evCocks;
+        event evRSA
+    else
+        event evRSA
