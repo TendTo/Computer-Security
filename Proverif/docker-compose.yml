@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  proverif:
+    image: proverif:latest
+    container_name: proverif
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/data
+    stdin_open: true
+    tty: true
+    command:
+      - bash
