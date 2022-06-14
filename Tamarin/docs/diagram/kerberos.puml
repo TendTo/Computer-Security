@@ -1,0 +1,18 @@
+@startuml Kerberos Schema
+title Kerberos Schema
+
+skinparam Monochrome true
+skinparam Shadowing false
+
+participant u as "User"
+participant aser as "Authentication Server"
+participant tgser as "Ticket Granting Server"
+participant s1 as "Service 1"
+
+u -> aser ++ : Client authentication
+aser -> u -- : Authentication response
+u -> tgser ++ : Request for ticket
+tgser -> u -- : Ticket response
+u -> s1 ++ : Request for service 1
+s1 -> u -- : Service 1 response
+@enduml

@@ -1,0 +1,49 @@
+\documentclass[letter,12pt,twocolumn]{article}
+
+\input{setup}
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+% Begin document
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+% Metadata
+\title{EWT summary}
+\author{Ernesto Casablanca}
+\date{\today}
+\makeatletter
+\renewenvironment{abstract}{%
+  \if@twocolumn
+    \section*{\abstractname}%
+  \else %% <- here I've removed \small
+    \begin{center}%
+      {\bfseries \Large\abstractname\vspace{\z@}}%  %% <- here I've added \Large
+    \end{center}%
+    \quotation
+  \fi}
+{\if@twocolumn\else\endquotation\bigskip\fi}
+
+
+% Title page
+\include{sections/title_page}
+
+% Index
+\tableofcontents
+\newpage
+
+% Abstract
+\input{sections/abstract}
+
+% Introduction
+\input{sections/introduction}
+
+% Schema
+\input{sections/schema}
+
+% Bibliografy
+\printglossary
+\printbibliography
+
+
+
+\end{document}
