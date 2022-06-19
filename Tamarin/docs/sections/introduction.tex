@@ -1,2 +1,23 @@
 \section{Introduzione}
-Progetto di Computer Security. Prima di tutto abbiamo consultato il manuale \cite{inp:tamarin-generation}
+
+\subsection{Input}
+
+In questa introduzione ci si soffermerà di una breve descrizione sul funzionamento di \gls{tamarin}. \\
+\gls{tamarin} è uno strumento in grado di effettuare la modellazione simbolica e, a partire da questa, l'analisi formale di protocolli di sicurezza.
+Per poter avviare una dimostrazione, bisogna fornire in input
+\begin{itemize}
+    \item il modello che rappresenta fedelmente e correttamente il protocollo
+    \item le libertà concesse all'avversario
+    \item le proprietà di sicurezza che si desidera assicurare
+\end{itemize}
+Quello che il tool cercherà di fare è dimostrare se le proprietà indicate sono verificate dal protocollo o, in caso contrario, un attacco che le comprometta. \\
+
+\subsection{Multiset rewriting}
+La tecnica utilizzata da \gls{tamarin} per modellare e poi analizzare un protocollo è quella del \gls{multiset-rewriting}, che si ottiene specificando un insieme di regole di riscrittura. \\
+
+Lo stato corrente viene alterato in maniera coerente alle regole imposte, che ne definiscono le modalità di transazione.
+Consultando è possibile stabilire, ad esempio, la conoscenza dell'avversario ad un istante $t$ o i messaggi pubblicati sul canale.
+
+\gls{tamarin} è in grado di applicare queste regole in maniera autonoma, al fine di produrre una prova di correttezza o un controesempio.
+Tuttavia, poichè si tratta di un problema indecidibile, la risoluzione automatica potrebbe non trovare un risultato.
+In questi casi è prevista una modalità interattiva che permette all'utente di analizzare lo stato corrente per guidare il programma nella risoluzione.

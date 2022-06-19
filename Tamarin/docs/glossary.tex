@@ -8,3 +8,28 @@
             both falsification and unbounded verification in the symbolic model.
         }
 }
+\newglossaryentry{cia}
+{
+    name={Confidentiality, Integrity, Availability (CIA)},
+    first={Confidentiality, Integrity, Availability (CIA)},
+    text={CIA},
+    description={
+            Confidentiality, Integrity e Availability sono le proprietà di sicurezza base più comuni che ci si aspetta un protocollo garantisca.
+            \begin{itemize}
+                \item Confidentiality: il protocollo è confidenziale, ovvero non è possibile conoscere il contenuto di un messaggio.
+                \item Integrity: il messaggio non è danneggiato o alterato.
+                \item Availability: il messaggio o il servizio è disponibile.
+            \end{itemize}
+        }
+}
+\newglossaryentry{multiset-rewriting}
+{
+    name={Multiset rewriting},
+    first={multiset rewriting},
+    text={multiset rewriting},
+    description={
+            Tecnica utilizzata da \gls{tamarin} per modellare e poi analizzare un protocollo.
+            Con questo formalismo si è in grado di passare da uno stato ad un altro del sistema attraverso le regole definite.
+            Si è quindi in grado di rappresentare sia il comportamento degli agenti che partecipano al protocollo, sia dell'avversario.
+        }
+}
