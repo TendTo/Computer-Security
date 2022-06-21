@@ -1,0 +1,20 @@
+@startuml MtProto
+
+skinparam Monochrome true
+skinparam Shadowing false
+skinparam MaxMessageSize 20
+
+participant c as "Client"
+participant s as "Server"
+
+c -> s ++ : nonce:int128
+c <- s -- : nonce:int128 server_nonce:int128 pq:string server_public_key_fingerprints:Vector long
+note over s
+pq: string representation of 
+the product of two different prime numbers.
+pq is less than or equal to $2^{63}-1$
+
+server_public_key_fingerprints: list of public 
+RSA key fingerprints received by the server
+end note
+@enduml

@@ -1,0 +1,37 @@
+\section{Analisi formale}
+
+\subsection{Modello del protocollo}
+Il modello del protocollo, realizzato per consentire un'analisi formale dello stesso, è realizzata con \gls{tamarin}.
+Utilizzando la tecnica del \gls{multiset-rewriting}, è possibile specificare una serie di regole di riscrittura
+che modellino fedelmente il comportamento degli agenti che vi partecipano. \\
+
+In questa analisi si procederà assumendo che le primitive crittografiche utilizzate dal protocollo siano sicure.
+Nello specifico, non è possibile in nessuna circostanza ottenere un testo in chiaro a partire da un testo cifrato senza conoscere la chiave, 
+le firme digitali non sono falsificabili e le funzioni hash sono collision-resistant. \\
+
+Sotto queste ipotesi, ci si concentrerà sullo scambio di messaggi attraverso la rete da parte di client e server.
+
+\subsection{Modello di attaccante}
+Il modello di attaccante adottato è quello classico Dolev-Yao \cite{art:dolev-yao}. \\
+In sintesi, l'attaccante ha il completo controllo del canale di comunicazione. 
+È quindi in grado di intercettare qualsiasi messaggio e di conoscerne il contenuto (che può essere cifrato o non),
+modificarlo a piacimento e inviarlo ad un destinatario arbitrario. \\
+Le uniche limitazioni imposte all'avversario sono relative alle ipotesi fatte in precedenza 
+sulla bontà delle primitive crittografiche, che non possono essere violate. \\
+
+Al fine di rendere più verosimile il modello, alcuni dei server coinvolti nel protocollo potrebbero essere compromessi,
+rivelando informazioni aggiuntive all'attaccante.
+
+\subsection{Proprietà di sicurezza}
+Ogni sottosezione di \gls{mtproto} soddisfa uno specifico obiettivo.
+Nel complesso, l'intero protocollo dovrebbe garantire le seguenti proprietà:
+\begin{itemize}
+    \item \textbf{Secrecy:} se un messaggio $m$ viene scambiato fra due agenti onesti $A$, $B$ durante una session $S$, 
+    il contenuto del messaggio è noto solo ad $A$ e $B$
+    \item \textbf{Forward secrecy:} una chiave di sessione $s$ non viene compromessa 
+    anche se la chiave a lungo termine usata per generarla viene compromessa
+    \item \textbf{Authentication:} se $B$ riceve un messaggio che, seguendo il protocollo,
+    attribuisce ad $A$, questo è stato effettivamente inviato da $A$
+    \item \textbf{Integrity:} se $A$ invia un messaggio $m$ a $B$ 
+    e questo riceve un messaggio $m'$ da $A$, ne segue che $m' = m$
+\end{itemize}

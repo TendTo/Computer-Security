@@ -1,4 +1,4 @@
-\documentclass[letter,12pt,twocolumn]{article}
+\documentclass[12pt]{article}
 
 \input{setup}
 
@@ -12,17 +12,6 @@
 \author{Ernesto Casablanca}
 \date{\today}
 \makeatletter
-\renewenvironment{abstract}{%
-  \if@twocolumn
-    \section*{\abstractname}%
-  \else %% <- here I've removed \small
-    \begin{center}%
-      {\bfseries \Large\abstractname\vspace{\z@}}%  %% <- here I've added \Large
-    \end{center}%
-    \quotation
-  \fi}
-{\if@twocolumn\else\endquotation\bigskip\fi}
-
 
 % Title page
 \include{sections/title_page}
@@ -34,16 +23,17 @@
 % Abstract
 \input{sections/abstract}
 
-% Introduction
-\input{sections/introduction}
+% Tamarin
+\input{sections/tamarin}
 
-% Schema
-\input{sections/schema}
+% MTProto
+\input{sections/mtproto}
 
-% Bibliografy
+% Formal Analysis
+\input{sections/analysis}
+
+% Bibliography
 \printglossary
 \printbibliography
-
-
 
 \end{document}

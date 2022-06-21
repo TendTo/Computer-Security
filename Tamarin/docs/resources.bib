@@ -17,5 +17,70 @@
 @manual{man:tamarin,
   author = {The Tamarin Team},
   title  = {Tamarin-Prover Manual},
-  year   = {2016}
+  year   = {2016},
+  pdf    = {https://tamarin-prover.github.io/manual/tex/tamarin-manual.pdf},
+  url    = {https://tamarin-prover.github.io/manual/index.html}
+}
+@manual{man:mtproto,
+  author = {Telegram},
+  title  = {MTProto Mobile Protocol},
+  year   = {2021},
+  url    = {https://core.telegram.org/mtproto}
+}
+@inproceedings{inp:mtproto-attacks,
+  copyright = {In Copyright - Non-Commercial Use Permitted},
+  year      = {2022},
+  author    = {Albrecht, Martin R. and Mareková, Lenka and Paterson, Kenneth G. and Stepanovs, Igors},
+  size      = {52},
+  abstract  = {We study the use of symmetric cryptography in the MTProto 2.0 protocol, Telegram's equivalent of the TLS record protocol. We give positive and negative results. On the one hand, we formally and in detail model a slight variant of Telegram's ``record protocol'' and prove that it achieves security in a suitable bidirectional secure channel model, albeit under unstudied assumptions; this model itself advances the state-of-the-art for secure channels. On the other hand, we first motivate our modelling deviation from MTProto as deployed by giving two attacks -- one of practical, one of theoretical interest -- against MTProto without our modifications. We then also give a third attack exploiting timing side channels, of varying strength, in three official Telegram clients. On its own this attack is thwarted by the secrecy of salt and id fields that are established by Telegram's key exchange protocol. To recover these, we chain the third attack with a fourth one against the implementation of the key exchange protocol on Telegram's servers. In totality, our results provide the first comprehensive study of MTProto's use of symmetric cryptography.},
+  keywords  = {Applied cryptography; Protocol security},
+  language  = {en},
+  doi       = {10.3929/ethz-b-000506353},
+  title     = {Four Attacks and a Proof for Telegram},
+  note      = {IEEE Symposium on Security and Privacy (IEEE S\&P 2022); Conference Location: San Francisco, CA, USA; Conference Date: May 22-26, 2022; Conference lecture held on May 23, 2022},
+  url       = {https://mtpsym.github.io/paper.pdf}
+}
+@inproceedings{inp:mtproto-proverif,
+  author   = {Miculan, Marino and Vitacolonna, Nicola},
+  year     = {2020},
+  pages    = {19},
+  title    = {Automated Symbolic Verification of Telegram's MTProto 2.0},
+  url      = {https://arxiv.org/pdf/2012.03141.pdf},
+  abstract = {MTProto 2.0 is a suite of cryptographic protocols for instant messaging at the core of the popular
+              Telegram messenger application. In this paper we analyse MTProto 2.0 using the symbolic verifier
+              ProVerif. We provide fully automated proofs of the soundness of MTProto 2.0's authentication,
+              normal chat, end-to-end encrypted chat, and rekeying mechanisms with respect to several security
+              properties, including authentication, integrity, secrecy and perfect forward secrecy; at the same time,
+              we discover that the rekeying protocol is vulnerable to an unknown key-share (UKS) attack. We
+              proceed in an incremental way: each protocol is examined in isolation, relying only on the guarantees
+              provided by the previous ones and the robustness of the basic cryptographic primitives. Our research
+              proves the formal correctness of MTProto 2.0 w.r.t. most relevant security properties, and it can
+              serve as a reference for implementation and analysis of clients and servers.}
+}
+@inproceedings{inp:mtproto-v1-attacks,
+  author    = {Jakobsen, Jakob and Orlandi, Claudio},
+  title     = {On the CCA (in)Security of MTProto},
+  year      = {2016},
+  isbn      = {9781450345644},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/2994459.2994468},
+  doi       = {10.1145/2994459.2994468},
+  abstract  = {Telegram is a popular messaging app which supports end-to-end encrypted communication. In Spring 2015 we performed an audit of Telegram's Android source code. This short paper summarizes our findings. Our main discovery is that the symmetric encryption scheme used in Telegram -- known as MTProto -- is not IND-CCA secure, since it is possible to turn any ciphertext into a different ciphertext that decrypts to the same message.We stress that this is a theoretical attack on the definition of security and we do not see any way of turning the attack into a full plaintext-recovery attack. At the same time, we see no reason why one should use a less secure encryption scheme when more secure (and at least as efficient) solutions exist.The take-home message (once again) is that well-studied, provably secure encryption schemes that achieve strong definitions of security (e.g., authenticated-encryption) are to be preferred to home-brewed encryption schemes.},
+  booktitle = {Proceedings of the 6th Workshop on Security and Privacy in Smartphones and Mobile Devices},
+  pages     = {6},
+  keywords  = {secret-key cryptography, mtproto, CCA-security},
+  location  = {Vienna, Austria},
+  series    = {SPSM '16}
+}
+@article{art:dolev-yao,
+  author  = {Dolev, D. and Yao, A.},
+  journal = {IEEE Transactions on Information Theory},
+  title   = {On the security of public key protocols},
+  year    = {1983},
+  volume  = {29},
+  number  = {2},
+  pages   = {198-208},
+  doi     = {10.1109/TIT.1983.1056650},
+  url     = {https://www.cs.huji.ac.il/~dolev/pubs/dolev-yao-ieee-01056650.pdf}
 }
