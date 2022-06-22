@@ -5,7 +5,8 @@
     text={Tamarin},
     description={
             Tamarin prover è un tool in grado di verificare la correttezza formale di protocolli di sicurezza.
-            both falsification and unbounded verification in the symbolic model.
+            È in grado di portare a termine dimostrazioni che possono evidenziare un controesempio al lemma
+            che si vuole dimostrare o ne verificano la correttezza tramite l'analisi simbolica e la tecnica del \gls{multiset-rewriting}
         }
 }
 \newglossaryentry{cia}
@@ -86,5 +87,16 @@
             Esistono diversi modi di implementare questo protocollo, ma l'idea alla base è quella di condividere
             pubblicamente una funzione one-way della propria chiave segreta con l'altro peer, permettendo ad entrambi,
             ciascuno a conoscenza del proprio segreto e della funzione del segreto dell'altro, di generare una chiave crittografica condivisa.
+        }
+}
+\newglossaryentry{kdf}
+{
+    name={Key Derivation Function (KDF)},
+    first={Key Derivation Function (KDF)},
+    text={KDF},
+    description={
+            Algoritmo crittografico deterministico in grado di generare una o più chiavi segrete
+            prendendo in input una tupla di valori, che diventano la master key.
+            Spesso ai segreti in input viene prima applicata una funzione di hash crittografica.
         }
 }
