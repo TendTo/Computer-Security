@@ -2,19 +2,51 @@
 
 skinparam Monochrome true
 skinparam Shadowing false
-skinparam MaxMessageSize 20
 
 participant c as "Client"
 participant s as "Server"
 
-c -> s ++ : nonce:int128
-c <- s -- : nonce:int128 server_nonce:int128 pq:string server_public_key_fingerprints:Vector long
-note over s
-pq: string representation of 
-the product of two different prime numbers.
-pq is less than or equal to $2^{63}-1$
-
-server_public_key_fingerprints: list of public 
-RSA key fingerprints received by the server
+note over c
+Genera $n_c$
 end note
+
+note over s
+Conosce le chiavi private $sk^1_s, sk^2_s, ..., sk^n_s$
+Genera $n_s, p, q$
+end note
+
+c -> s ++ : $n_c$
+c <- s -- : $n_c, n_s, qp, [fp^1_s, fp^2_s, ..., fp^n_s]$
+
+note over c
+Genera $n_k$
+Sceglie una chiave $pk^i_s$ fra le fingerprint
+Calcola $p, q, (k, iv) = \mathcal{KDF}(n_s, n_k)$
+Crea $m_1 = qp, q, p, n_c, n_k, n_s$
+end note
+
+c -> s ++ : $n_c, n_s, q, p, fp^i_s, {\mathcal{SHA1}(m_1), m_1}_{pk^i_s}$
+
+note over s
+Genera $g, P, a \in \Z_P$
+Calcola $g_a = g^a, (k, iv) = \mathcal{KDF}(n_s, n_k)$
+Crea $m_2 = n_c, n_s, g, p, g_a, text{time}$
+end note
+
+c <- s -- : $n_c, n_s, {\mathcal{SHA1}(m_2), m_2}_{(k, iv)}$
+
+
+note over c
+Genera $b \in \Z_P$
+Calcola $k_{AS} = g^b_a \mod P$
+Crea $m_3 = n_c, n_s, text{retry_id}, g_b$
+end note
+
+c -> s ++ : $n_c, n_s, {\mathcal{SHA1}(m_3), m_3}_{(k, iv)}$
+
+note over s
+Calcola $k_{AS} = g^a_b \mod P$
+end note
+
+c <- s -- : $n_c, n_s, \mathcal{SHA1}(n_k)$
 @enduml

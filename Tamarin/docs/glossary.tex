@@ -43,3 +43,48 @@
             Viene rivolto in particolare ai dispositivi mobili.
         }
 }
+\newglossaryentry{rpc}
+{
+    name={Remote Procedure Call (RPC)},
+    first={Remote Procedure Call (RPC)},
+    text={RPC},
+    description={
+            Invocazioni effettuate da un applicativo verso un altro per fare in modo che ques'ultimo avvii
+            una specifica procedura.
+            Tali invocazioni possono avvenire anche tramite la rete.
+            In ambito Object Oriented, si parla di Remote Method Invocation (RMI). \\
+            Generalmente si verificano i seguenti passaggi:
+            \begin{enumerate}
+                \item L'applicativo client invoca una funzione stub, in maniera trasparente allo stesso
+                \item Lo stub prepara la chiamata, con la firma della funzione ed i parametri, e la inoltra al destinatario
+                \item Il sistema operativo del client esegue le procedure necessario per il trasferimento della chiamata
+                \item Il sistema operativo del server riceve la chiamata e la inoltra al server stub
+                \item Il server stub traduce la richiesta in una funzione eseguibile dall'applicativo di destinazione
+                \item L'applicativo di destinazione esegue la funzione. La risposta seguirà il percorso inverso
+            \end{enumerate}
+        }
+}
+\newglossaryentry{ip}
+{
+    name={Internet Protocol address (IP address)},
+    first={Internet Protocol address (IP address)},
+    text={IP},
+    description={
+            Numero di 32 bit divisi in 4 ottetti che identifica univocamente un host all'interno di una rete.
+            Più precisamente, una prima parte di lunghezza variabile (spesso i primi 24 bit) specificano la rete,
+            i rimanenti i bit specificano l'indirizzo di un host che vi appartiene.
+            Viene utilizzato nei protocolli di instradamento per direzionare il traffico al destinatario desiderato.
+        }
+}
+\newglossaryentry{dhe}
+{
+    name={Diffie-Hellman key Exchange (DHE)},
+    first={Diffie-Hellman key Exchange (DHE)},
+    text={DHE},
+    description={
+            Protocollo utilizzato per lo scambio sicuro di chiavi crittografiche attraverso un canale insicuro.
+            Esistono diversi modi di implementare questo protocollo, ma l'idea alla base è quella di condividere
+            pubblicamente una funzione one-way della propria chiave segreta con l'altro peer, permettendo ad entrambi,
+            ciascuno a conoscenza del proprio segreto e della funzione del segreto dell'altro, di generare una chiave crittografica condivisa.
+        }
+}

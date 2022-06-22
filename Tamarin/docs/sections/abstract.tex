@@ -1,8 +1,13 @@
 \begin{abstract}
-    \gls{tamarin} è un potente tool utilizzato per effettuare l'analisi formale assistita di protocolli di sicurezza.
-    In generale, il risultato può essere ottenuto in automatico dallo strumento.
-    Però, poiché il tipo di analisi formale è indecidibile, può capitare che il prover non si arresti.
-    Bisogna quindi intervenire manualmente, utilizzando la modalità interattiva. \\
-    Utilizzare \gls{tamarin} permette di ottenere una maggiore sicurezza a proposito delle garanzie che un determinato protocollo è in grado di offrire, o, al contrario, ne evidenzia le criticità.
-    È per questo che \gls{tamarin} impiegato spesso in ambiti in cui assicurarsi che il protocollo offra effettivamente le proprietà di sicurezza desiderate.
+    Nell'ambito della sicurezza informatica avere delle certezze sulla bontà di un protocollo è un obiettivo ambito.
+    Tuttavia non è sempre facile riuscire a dimostrare le proprietà desiderate in maniera soddisfacente e soprattutto formale.
+    Per quanto l'esaminatore possa essere attento ed esperto, c'è sempre la possibilità che un vettore d'attacco non sia individuato correttamente,
+    o, al contrario, non si riesce ad essere sicuri di avere fra le mani un protocollo effettivamente sicuro. \\
+
+    Per questo motivo esistono tool come \gls{tamarin}, in grado di effettuare un'analisi formale assistita di protocolli di sicurezza.
+    Strumenti di questo genere sono spesso impiegati in ambiti dove ottenere delle garanzie universalmente verificabili sulle proprietà
+    garantite da un protocollo è di fondamentale importanza per il business. \\
+
+    In questa relazione verrà sottoposto a questo tipo di analisi MTProto 2.0, 
+    un protocollo di comunicazione ad hoc utilizzato dall'app di messaggistica istantanea Telegram.
 \end{abstract}
