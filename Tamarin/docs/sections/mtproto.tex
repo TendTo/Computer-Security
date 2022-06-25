@@ -77,7 +77,7 @@ La procedura ricorda un \gls{dhe}, ed è così articolata (\autoref{fig:mtproto-
           la serializzazione binaria dei valori $pq, p, q$, nonce, nonce del server, ed una nuova nonce generata con una randomness crittografica
     \item il server risponde con le due nonce iniziali e un payload cifrato con AES256 con chiave $t_{temp}$ realizzata a partire dalla nuova nonce segreta inviata dal client tramite \gls{kdf}.
           Il payload contiene l'hash SHA1 della nuova nonce inviata dal client,
-          un numero primo $2^{2047} < P < 2^{2048} : P, \frac{p-1}{2} \in \mathbb{P}$, un generatore $g$ di un gruppo ciclico con ordine $\frac{p-1}{2}$ e il valore $g^a$,
+          un numero primo $2^{2047} < N < 2^{2048} : N, \frac{p-1}{2} \in \mathbb{N}$, un generatore $g$ di un gruppo ciclico con ordine $\frac{p-1}{2}$ e il valore $g^a$,
           dove $a$ è un numero casuale generato dal server
     \item il client genera in maniera sicura un numero random $b$ di 2048 bit ed invia al server le due nonce e un crittotesto
           cifrato con la chiave temporanea ${k_temp}$ contenente il valore $g^b$
@@ -158,7 +158,7 @@ Eventuali valori che non rientrano negli intervalli definiti sono scartati immed
         \node at (173.4pt,279.2001pt)[below right,color=black]{$n_c, n_s, q, p, fp^i_s, \{\mathcal{H}(m_1), m_1\}_{pk^i_s}$};
         \draw[pstyle3] (408pt,309.8001pt) -- (408pt,365.8001pt) -- (767pt,365.8001pt) -- (767pt,319.8001pt) -- (757pt,309.8001pt) -- (408pt,309.8001pt);
         \draw[pstyle3] (757pt,309.8001pt) -- (757pt,319.8001pt) -- (767pt,319.8001pt) -- (757pt,309.8001pt);
-        \node at (414pt,314.8001pt)[below right,color=black]{Genera $g, P, a \in \mathbb{Z}_P$};
+        \node at (414pt,314.8001pt)[below right,color=black]{Genera $g, N, a \in \mathbb{Z}_P$};
         \node at (414pt,330.4001pt)[below right,color=black]{Calcola $g_a = g^a, (k, iv) = \mathcal{KDF}(n_s, n_k)$};
         \node at (414pt,346.0001pt)[below right,color=black]{Crea $m_2 = n_c, n_s, g, p, g_a, \text{time}$};
         \draw[pstyle4] (177.4pt,389.2001pt) -- (167.4pt,393.2001pt) -- (177.4pt,397.2001pt) -- (173.4pt,393.2001pt) -- cycle;
@@ -167,14 +167,14 @@ Eventuali valori che non rientrano negli intervalli definiti sono scartati immed
         \draw[pstyle3] (25pt,406.2001pt) -- (25pt,462.2001pt) -- (306pt,462.2001pt) -- (306pt,416.2001pt) -- (296pt,406.2001pt) -- (25pt,406.2001pt);
         \draw[pstyle3] (296pt,406.2001pt) -- (296pt,416.2001pt) -- (306pt,416.2001pt) -- (296pt,406.2001pt);
         \node at (31pt,411.2001pt)[below right,color=black]{Genera $b \in \mathbb{Z}_P$};
-        \node at (31pt,426.8001pt)[below right,color=black]{Calcola $k_{AS} = g^b_a \mod P$};
+        \node at (31pt,426.8001pt)[below right,color=black]{Calcola $k_{AS} = g^b_a \mod N$};
         \node at (31pt,442.4001pt)[below right,color=black]{Crea $m_3 = n_c, n_s, \text{retry\_id}, g_b$};
         \draw[pstyle4] (571.0914pt,485.6002pt) -- (581.0914pt,489.6002pt) -- (571.0914pt,493.6002pt) -- (575.0914pt,489.6002pt) -- cycle;
         \draw[pstyle5] (166.4pt,489.6002pt) -- (577.0914pt,489.6002pt);
         \node at (173.4pt,472.0002pt)[below right,color=black]{$n_c, n_s, \{\mathcal{H}(m_3), m_3\}_{(k, iv)}$};
         \draw[pstyle3] (471pt,502.6002pt) -- (471pt,527.6002pt) -- (704pt,527.6002pt) -- (704pt,512.6002pt) -- (694pt,502.6002pt) -- (471pt,502.6002pt);
         \draw[pstyle3] (694pt,502.6002pt) -- (694pt,512.6002pt) -- (704pt,512.6002pt) -- (694pt,502.6002pt);
-        \node at (477pt,507.6002pt)[below right,color=black]{Calcola $k_{AS} = g^a_b \mod P$};
+        \node at (477pt,507.6002pt)[below right,color=black]{Calcola $k_{AS} = g^a_b \mod N$};
         \draw[pstyle4] (177.4pt,550.8002pt) -- (167.4pt,554.8002pt) -- (177.4pt,558.8002pt) -- (173.4pt,554.8002pt) -- cycle;
         \draw[pstyle5] (171.4pt,554.8002pt) -- (587.0914pt,554.8002pt);
         \node at (183.4pt,537.2002pt)[below right,color=black]{$n_c, n_s, \mathcal{H}(n_k)$};

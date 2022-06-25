@@ -6,17 +6,17 @@ Utilizzando la tecnica del \gls{multiset-rewriting}, è possibile specificare un
 che modellino fedelmente il comportamento degli agenti che vi partecipano. \\
 
 In questa analisi si procederà assumendo che le primitive crittografiche utilizzate dal protocollo siano sicure.
-Nello specifico, non è possibile in nessuna circostanza ottenere un testo in chiaro a partire da un testo cifrato senza conoscere la chiave, 
+Nello specifico, non è possibile in nessuna circostanza ottenere un testo in chiaro a partire da un testo cifrato senza conoscere la chiave,
 le firme digitali non sono falsificabili e le funzioni hash sono collision-resistant. \\
 
 Sotto queste ipotesi, ci si concentrerà sullo scambio di messaggi attraverso la rete da parte di client e server.
 
 \subsection{Modello di attaccante}
 Il modello di attaccante adottato è quello classico Dolev-Yao \cite{art:dolev-yao}. \\
-In sintesi, l'attaccante ha il completo controllo del canale di comunicazione. 
+In sintesi, l'attaccante ha il completo controllo del canale di comunicazione.
 È quindi in grado di intercettare qualsiasi messaggio e di conoscerne il contenuto (che può essere cifrato o non),
 modificarlo a piacimento e inviarlo ad un destinatario arbitrario. \\
-Le uniche limitazioni imposte all'avversario sono relative alle ipotesi fatte in precedenza 
+Le uniche limitazioni imposte all'avversario sono relative alle ipotesi fatte in precedenza
 sulla bontà delle primitive crittografiche, che non possono essere violate. \\
 
 Al fine di rendere più verosimile il modello, alcuni dei server coinvolti nel protocollo potrebbero essere compromessi,
@@ -26,12 +26,218 @@ rivelando informazioni aggiuntive all'attaccante.
 Ogni sottosezione di \gls{mtproto} soddisfa uno specifico obiettivo.
 Nel complesso, l'intero protocollo dovrebbe garantire le seguenti proprietà:
 \begin{itemize}
-    \item \textbf{Secrecy:} se un messaggio $m$ viene scambiato fra due agenti onesti $A$, $B$ durante una session $S$, 
-    il contenuto del messaggio è noto solo ad $A$ e $B$
-    \item \textbf{Forward secrecy:} una chiave di sessione $s$ non viene compromessa 
-    anche se la chiave a lungo termine usata per generarla viene compromessa
+    \item \textbf{Secrecy:} se un messaggio $m$ viene scambiato fra due agenti onesti $A$, $B$ durante una session $S$,
+          il contenuto del messaggio è noto solo ad $A$ e $B$
+    \item \textbf{Forward secrecy:} una chiave di sessione $s$ non viene compromessa
+          anche se la chiave a lungo termine usata per generarla viene compromessa
     \item \textbf{Authentication:} se $B$ riceve un messaggio che, seguendo il protocollo,
-    attribuisce ad $A$, questo è stato effettivamente inviato da $A$
-    \item \textbf{Integrity:} se $A$ invia un messaggio $m$ a $B$ 
-    e questo riceve un messaggio $m'$ da $A$, ne segue che $m' = m$
+          attribuisce ad $A$, questo è stato effettivamente inviato da $A$
+    \item \textbf{Integrity:} se $A$ invia un messaggio $m$ a $B$
+          e questo riceve un messaggio $m'$ da $A$, ne segue che $m' = m$
 \end{itemize}
+
+\subsection{Authorization key protocol}
+La verifica del protocollo di creazione dell'Authorization Key dimostra in maniera formale le proprietà di sicurezza attese.
+
+\subsubsection{Authentication}
+
+\begin{lstlisting}[caption=Il client non è autenticato agli occhi del server.
+    Anche un avversario può iniziare legittimamente il protocollo. Questo lemma è falso.,
+    label=cod:lemma:client_auth]
+lemma client_auth:
+    "
+    All nc ns pkS #i .
+        // Se S accetta l'inizio del protocollo...
+        S_AcceptStart(nc, ns, pkS) @ i
+        ==>
+        Ex #j . 
+            // ... C ha mandato il primo messaggio
+            C_Start(nc) @ j
+            & j < i
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se il client ha ricevuto i parametri relativi a DHE, è stato il server ad inviarli.},
+    label=cod:lemma:auth_dh]
+lemma auth_dh:
+    "
+    All nc ns nk N ga tk #i .
+        // Se C ha ricevuto i parametri relativi a DHE,
+        // che ha decifrato con tk...
+        C_ReceivesDHParameters(nc, ns, N, ga) @ i
+        & C_GenerateTK(nc, ns, nk, tk) @ i
+        ==>
+        ( Ex #j .
+            // ... li ha inviati S...
+            S_SendsDHParameters(nc, ns, N, ga) @ j
+            & j < i
+        )
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se il protocollo si è concluso con successo, il client e il server hanno entrambi portato 
+    a termine il protollo},
+    label=cod:lemma:success_auth]
+lemma success_auth:
+    "
+    All nc ns nk kas #i .
+        // Se C ha completato con successo il protocollo, ottenendo kas...
+        C_Success(nc, ns, kas) @ i
+        & C_SuccessSecrets(nc, ns, nk) @ i
+        ==>
+        ( Ex #j .
+            // ... anche S ha raggiunto la stessa conclusione
+            S_Success(nc, ns, kas) @ j
+            & j < i
+        )
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+\end{lstlisting}
+
+\subsubsection{Secrecy e Forward Secrecy}
+
+\begin{lstlisting}[caption={Se la chiave privata del server non è compromessa e non è rivelata per errore,
+    l'avversario non arriva a conoscere la nonce nk condivisa
+    fra C ed S.},
+    label=cod:lemma:secret_nk]
+lemma secret_nk:
+    "
+    All nc ns nk #i .
+        // Se C genera nk...
+        C_GenerateNK(nc, ns, nk) @ i
+        ==> 
+        // ... l'avversario non ha modo di conoscere il suo valore
+        ( not   ( Ex #k .
+                    K(nk) @ k
+                )
+        )
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        | 
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una chiave condivisa kas,
+    sono i soli a conoscerla.},
+    label=cod:lemma:secret_kas]
+lemma secret_kas:
+    "
+    All nc ns nk kas #i .
+        // Se C ha completato con successo il protocollo, ottenendo kas...
+        C_Success(nc, ns, kas) @ i
+        & C_SuccessSecrets(nc, ns, nk) @ i
+        ==> 
+        // ... un attaccante non ha modo di conoscere kas
+        ( not ( Ex #k .
+                K(kas) @ k
+            )
+        )
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una chiave condivisa kas,
+    sono i soli a conoscerla.
+    Questa rimane sicura anche se avvengono dei leak a posteriori di informazioni segrete,
+    garantendo forward secrecy, purchè ciò avvenga dopo il quarto messaggio del protocollo.},
+    label=cod:lemma:secret_kas_leaks]
+lemma secret_kas_leaks:
+    "
+    All nc ns nk tk kas #i .
+        // Se C ha generato kas...
+        C_CreateKas(nc, ns, kas) @ i
+        & C_GenerateTK(nc, ns, nk, tk) @ i
+        ==> 
+        // ... un attaccante non ha modo di conoscere kas
+        not ( Ex #k .
+                K(kas) @ k
+            )
+        | // ... a meno che non sia stato rivelato skS o nk prima del quarto messaggio
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+            & k < i
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+            & k < i
+        )
+    "
+\end{lstlisting}
+
+\subsubsection{Integrity}
+
+\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una chiave condivisa kas nella 
+    stessa sessione, questa è uguale per entrambi},
+    label=cod:lemma:agreement_kas]
+lemma agreement_kas:
+    "
+    All nc ns nk c_kas s_kas #i #j .
+        // Se C e S hanno completato con successo il protocollo, ottenendo c_kas e s_kas...
+        C_Success(nc, ns, c_kas) @ i
+        & C_SuccessSecrets(nc, ns, nk) @ i
+        & S_Success(nc, ns, s_kas) @ j
+        ==>
+        // ... le due chiavi ottenute coincidono
+        c_kas = s_kas
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una stessa chiave condivisa kas,
+    è perchè stanno partecipendo alla medesima sessione},
+    label=cod:lemma:agreement_session]
+lemma agreement_session:
+    "
+    All c_nc c_ns s_nc s_ns nk kas #i #j .
+        // Se C e S hanno ottenuto la stessa chiave kas...
+        C_Success(c_nc, c_ns, kas) @ i
+        & C_SuccessSecrets(c_nc, c_ns, nk) @ i
+        & S_Success(s_nc, s_ns, kas) @ j
+        ==>
+        // ... partecipavano allo stesso protocollo
+        c_nc = s_nc & c_ns = s_ns
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+\end{lstlisting}
