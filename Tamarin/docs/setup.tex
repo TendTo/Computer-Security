@@ -8,6 +8,7 @@
 \usepackage{color}
 \usepackage{hyperref} % Extensive support for hypertext in LATEX (https://ctan.org/pkg/hyperref)
 \usepackage{csquotes}
+\usepackage[title]{appendix}
 \usepackage{graphicx} % Enhanced support for graphics (https://ctan.org/pkg/graphicx)
 \usepackage{framed} % Framed or shaded regions that can break across pages (https://ctan.org/pkg/framed)
 \usepackage[acronyms,style=altlist,nopostdot]{glossaries}
@@ -20,7 +21,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%
 % Settings
 %%%%%%%%%%%%%%%%%%%%%%%%
-\providecommand*{\listingname}{Cod.}
+\renewcommand*{\lstlistingname}{Cod.}
 \renewcommand*{\figureautorefname}{Fig.}
 \renewcommand*{\chapterautorefname}{Cap.}
 \renewcommand*{\sectionautorefname}{Sez.}
@@ -62,7 +63,11 @@
     sensitive=true,
     comment=[l]{//},
     morecomment=[s]{/*}{*/},
-    commentstyle=\color{darkGreen}\ttfamily
+    commentstyle=\color{darkGreen}\ttfamily,
+    escapeinside={\%*}{*)},
+    inputencoding=utf8,
+    extendedchars=true,
+    literate={á}{{\'a}}1 {ò}{{\'o}}1 {è}{{\'e}}1,
 }
 \lstset{
     language=spthy,
