@@ -1,0 +1,244 @@
+
+/*
+ *  Author: TendTo
+ *  Model Name: MTProto v2.0 - Creating an Authorization Key
+ *  Status: WORKING
+ */
+
+theory MTProto_AuthKey_Creation
+begin
+
+builtins: hashing, asymmetric-encryption, symmetric-encryption, diffie-hellman
+functions: prod/2, kdf/2
+equations: prod(q, p) = <q, p>
+
+// Generazione di un nuovo pario di chiavi asimmetriche. La chiave pubblica è nota a tutti
+rule generate_key_pair:
+    [ Fr(~skN) ]
+    -->
+    [ Out( pk(~skN)), !Sk($A, ~skN), !Pk($A,  pk(~skN)) ]
+
+// Viene rivelata la chiave segreta del server
+// rule reveal_s_sk:
+//     [ !Sk($S, ~skS) ]
+//     --[ RevealSkS(~skK) ]->
+//     [ Out(~skS) ]
+
+/**
+ * Il client:
+ * - genera <nc>
+ * - invia <nc>
+ */
+rule c_1:
+    [ Fr(~nc) ]
+    --[ C_Start(~nc) ]->
+    [ Out(~nc), St_C_1($C, ~nc) ]
+
+/**
+ * Il server:
+ * - riceve <nc>
+ * - genera <p, q, ns>
+ * - restituisce <nc, ns, qp, [pk_i]>.
+ * SEMPLIFICAZIONE: la lista contiene solo una chiave pubblica invece che molteplici fingerprint del server.
+ */
+rule s_1:
+    let
+        qp = prod($q, $p)
+        m1 = <nc, ~ns, prod($q, $p), pkS>
+    in
+    [ Fr(~ns), !Pk($S, pkS), In(nc) ]
+    --[ S_AcceptStart(nc, ~ns, pkS), S_SendPOW(nc, ~ns, qp) ]->
+    [ Out(m1), St_S_1($S, nc, ~ns, $q, $p) ]
+
+/**
+ * Il client:
+ * - riceve <nc, ns, prod(q, p), pkS>
+ * - genera <nk>
+ * - crea <p2> = <nc, ns, nk, prod(q, p)>
+ * - invia <nc, ns, prod(q, p), pkS, {H(p2), p2}pkS>
+ * SEMPLIFICAZIONE: il client non scompone prod(q, p) in q e p, invia direttamente prod(q, p).
+ * Ciò non altera la sicurezza del protocollo, poichè quel passaggio ha
+ * come unico scopo quello di fare da deterrente ad attacchi di tipo DDos.
+ */
+rule c_2:
+    let
+        m1 = <~nc, ns, qp, pkS>
+        p2 = <~nc, ns, ~nk, qp, pkS>
+        m2 = <~nc, ns, qp, pkS, aenc{h(p2), p2}pkS>
+    in
+    [ Fr(~nk), St_C_1(C, ~nc), !Pk($S, pkS), In(m1) ]
+    --[ C_SolvePOW(~nc, ns, qp), C_GenerateNk(~nc, ns, ~nk) ]->
+    [ Out(m2), St_C_2(C, ~nc, ns, ~nk) ]
+
+/**
+ * Il server:
+ * - riceve <nc, ns, prod(q, p), pkS, {H(m2), m2}pkS>
+ * - genera <N, a>
+ * - calcola <ga> = <g^a mod p>, <tk> = <kdf(ns, nk)>
+ * - crea <p3> = <nc, ns, g, N, ga>
+ * - restituisce <nc, ns, {H(p3), p3}tk>
+ * SEMPLIFICAZIONE: rimosso il timestamp
+ */
+rule s_2:
+    let
+        pkS = pk(skS)
+        ga = 'g'^~a
+        qp = prod(q, p)
+        p2 = <nc, ~ns, nk, qp, pkS>
+        m2 = <nc, ~ns, qp, pkS, aenc{h(p2), p2}pkS>
+        tk = kdf(~ns, nk)
+        p3 = <nc, ~ns, 'g', ~N, ga>
+        m3 = <nc, ~ns, senc{h(p3), p3}tk>
+    in
+    [ Fr(~N), Fr(~a), !Sk(S, skS), St_S_1(S, nc, ~ns, q, p), In(m2) ]
+    --[ S_ReceivesNk(nc, ~ns, nk), S_CreateTk(S, tk), S_SendsDHParameters(nc, ~ns, ~N, ga) ]->
+    [ Out(m3), St_S_2(S, nc, ~ns, nk, ~a, tk) ]
+
+/**
+ * Il client:
+ * - riceve <nc, ns, {H(p3), p3}tk>
+ * - genera <b>
+ * - calcola <tk> = <kdf(ns, nk)>, <kas> = <ga^b>, <gb> = <g^b>
+ * - crea <p4> = <nc, ns, retry_id, gb>
+ * - invia <nc, ns, {H(p4), p4}tk>
+ */
+rule c_3:
+    let
+        retry_id = '0'
+        gb = 'g'^~b
+        kas = ga^~b
+        tk = kdf(ns, ~nk)
+        p3 = <~nc, ns, 'g', N, ga>
+        m3 = <~nc, ns, senc{h(p3), p3}tk>
+        p4 = <~nc, ns, retry_id, gb>
+        m4 = <~nc, ns, senc{h(p4), p4}tk>
+    in
+    [ Fr(~b), St_C_2(C, ~nc, ns, ~nk), In(m3) ]
+    --[ C_CreateTk(C, tk), C_CreateKas(C, kas), C_ReceivesDHParameters(~nc, ns, N, ga) ]->
+    [ Out(m4), St_C_3(C, ~nc, ns, ~nk, retry_id, kas) ]
+
+/**
+ * Il server:
+ * - riceve <nc, ns, {H(p4), p4}tk>
+ * - calcola <kas> = <gb^a>
+ * - restituisce <nc, ns, H(nk)>
+ */
+ rule s_3:
+ let
+    kas = gb^~a
+    p4 = <nc, ~ns, retry_id, gb>
+    m4 = <nc, ~ns, senc{h(p4), p4}tk>
+    m5 = <nc, ~ns, h(nk)>
+ in
+ [ St_S_2(S, nc, ~ns, nk, ~a, tk), In(m4) ]
+ --[ S_CreateKas(S, kas), S_DecryptTk(S, tk), S_Success(S, nc, ~ns, kas) ]->
+ [ Out(m5) ]
+
+/**
+ * Il client:
+ * - riceve <nc, ns, H(nk)>
+ * - verifica che <nk> sia corretto
+ */
+ rule c_4:
+ let
+    m5 = <~nc, ns, h(~nk)>
+ in
+ [ St_C_3(C, ~nc, ns, ~nk, retry_id, kas), In(m5) ]
+ --[ C_Success(C, ~nc, ns, kas) ]->
+ [ ]
+
+/**
+ * Non vi è autenticazione del client per il server.
+ * Anche un attaccante può iniziare una sessione del protocollo.
+ * RISULTATO ATTESO: FALSO
+ */
+// lemma client_auth:
+//     "
+//     All S nc ns pkS #i .
+//         S_AcceptStart(S, nc, ns, pkS) @ i
+//         ==>
+//         Ex C #j . 
+//             C_Start(C, nc) @ j
+//             & j < i
+//     "
+
+/**
+ * Se la chiave privata del server non è compromessa,
+ * l'avversario non arriva a conoscere la nonce nk condivisa
+ * fra C ed S.
+ * RISULTATO ATTESO: VERO
+ */
+lemma secret_nk:
+    "
+    All nc ns nk #i #j.
+        S_ReceivesNk(nc, ns, nk) @ j
+        & C_GenerateNk(nc, ns, nk) @ i
+        & j < i
+        ==> 
+        not ( Ex #k .
+                K(nk) @ k
+            )
+    "
+
+/**
+ * Se il client ha ricevuto i parametri relativi a DHE, è stato il server ad inviarli,
+ * a meno di un leak della chiave segreta del server o della nonce nk.
+ * RISULTATO ATTESO: VERO
+ */
+lemma auth_dh:
+    "
+    All nc ns N ga #i .
+        C_ReceivesDHParameters(nc, ns, N, ga) @ i
+        ==> 
+        ( Ex #j .
+            S_SendsDHParameters(nc, ns, N, ga) @ j
+            & j < i
+        )
+        & ( not (( Ex #k .
+                    K(N) @ k 
+                )
+                |
+                ( Ex #k1 .
+                    K(ga) @ k1
+                )
+            )
+        )
+    "
+
+
+
+/**
+ * Il protocollo può creare una chiave temporanea tk
+ * nota solo a C ed S (sanity check).
+ * RISULTATO ATTESO: VERO
+ */
+lemma can_create_tk:
+    exists-trace
+    "
+    Ex C S tk #i #j .
+        S_CreateTk(S, tk) @ i
+        & C_CreateTk(C, tk) @ j
+        & i < j
+        & not ( Ex #k .
+                    K(tk) @ k
+              )
+    "
+
+/**
+ * Il protocollo può avere successo (sanity check).
+ * C ed S hanno creato una chiave condivisa nota solo a loro due
+ * RISULTATO ATTESO: VERO
+ */
+lemma can_succede:
+    exists-trace
+    "
+    Ex C S nc ns kas #i #j .
+        C_Success(C, nc, ns, kas) @ i
+        & S_Success(S, nc, ns, kas) @ j
+        & j < i
+        & not ( Ex #k .
+                    K(kas) @ k
+              )
+    "
+
+end
