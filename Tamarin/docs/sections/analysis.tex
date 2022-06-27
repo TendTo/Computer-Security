@@ -1,15 +1,15 @@
 \section{Analisi formale}
 
 \subsection{Modello del protocollo}
-Il modello del protocollo, realizzato per consentire un'analisi formale dello stesso, è realizzata con \gls{tamarin}.
+Per realizzare un'analisi formale, il protocollo è stato scritto utilizzando la sintassi prevista da \gls{tamarin}.
 Utilizzando la tecnica del \gls{multiset-rewriting}, è possibile specificare una serie di regole di riscrittura
-che modellino fedelmente il comportamento degli agenti che vi partecipano. \\
+che modellino il comportamento degli agenti che vi partecipano. \\
 
 In questa analisi si procederà assumendo che le primitive crittografiche utilizzate dal protocollo siano sicure.
 Nello specifico, non è possibile in nessuna circostanza ottenere un testo in chiaro a partire da un testo cifrato senza conoscere la chiave,
 le firme digitali non sono falsificabili e le funzioni hash sono collision-resistant. \\
 
-Sotto queste ipotesi, ci si concentrerà sullo scambio di messaggi attraverso la rete da parte di client e server.
+Sotto queste ipotesi, ci si concentrerà invece sullo scambio di messaggi attraverso la rete fra client e server.
 
 \subsection{Modello di attaccante}
 Il modello di attaccante adottato è quello classico Dolev-Yao \cite{art:dolev-yao}. \\
@@ -19,8 +19,9 @@ modificarlo a piacimento e inviarlo ad un destinatario arbitrario. \\
 Le uniche limitazioni imposte all'avversario sono relative alle ipotesi fatte in precedenza
 sulla bontà delle primitive crittografiche, che non possono essere violate. \\
 
-Al fine di rendere più verosimile il modello, alcuni dei server coinvolti nel protocollo potrebbero essere compromessi,
-rivelando informazioni aggiuntive all'attaccante.
+Al fine di rendere più verosimile il modello, vi sono delle regole artificiali che rivelano informazioni aggiuntive all'attaccante.
+Questo permette di valutare che abusi il protocollo è in grado di sopportare prima di 
+non garantire più la proprietà di sicurezza richiesta.
 
 \subsection{Proprietà di sicurezza}
 Ogni sottosezione di \gls{mtproto} soddisfa uno specifico obiettivo.

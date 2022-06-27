@@ -10,14 +10,70 @@ Per poter avviare una dimostrazione, bisogna fornire in input
     \item le libertà concesse all'avversario
     \item le proprietà di sicurezza che si desidera assicurare
 \end{itemize}
-Quello che il tool cercherà di fare è dimostrare se le proprietà indicate sono verificate dal protocollo o, in caso contrario, un attacco che le comprometta. \\
+Quello che il tool cercherà di fare è dimostrare se le proprietà indicate sono verificate dal protocollo o, in caso contrario, un attacco che le comprometta.
 
 \subsection{Multiset rewriting}
 La tecnica utilizzata da \gls{tamarin} per modellare e poi analizzare un protocollo è quella del \gls{multiset-rewriting}, che si ottiene specificando un insieme di regole di riscrittura. \\
 
 Lo stato corrente viene alterato in maniera coerente alle regole imposte, che ne definiscono le modalità di transazione.
-Consultando è possibile stabilire, ad esempio, la conoscenza dell'avversario ad un istante $t$ o i messaggi pubblicati sul canale.
+Consultandolo è possibile stabilire, ad esempio, la conoscenza dell'avversario ad un istante $t$ o i messaggi pubblicati sul canale. \\
+All'inizio, lo stato iniziale è il multiset vuoto, che si popola man mano secondo le regole di transizione.
 
 \gls{tamarin} è in grado di applicare queste regole in maniera autonoma, al fine di produrre una prova di correttezza o un controesempio.
 Tuttavia, poiché si tratta di un problema indecidibile, la risoluzione automatica potrebbe non trovare un risultato.
 In questi casi è prevista una modalità interattiva che permette all'utente di analizzare lo stato corrente per guidare il programma nella risoluzione.
+
+\subsection{Rule}
+Le regole di riscrittura si compongono di tre parti:
+\begin{itemize}
+    \item \textbf{le precondizioni}, indicano i fatti che devono essere presenti nello stato corrente del programma per far si che la regola sia applicabile. \\
+          A meno che non sia indicata con il simbolo \textit{!}, viene rimossa dallo stato dopo essere stata utilizzata
+    \item \textbf{le azioni}, vengono salvate come traccia. Consultando quest'ultima attraverso i lemmi, è possibile verificare le proprietà di sicurezza
+    \item \textbf{le conclusioni}, vengono aggiunte allo stato corrente del programma, sostituendo gli input
+\end{itemize}
+
+Più formalmente, dato uno stato $S$ le regole con forma $l \rightarrow [a] \rightarrow r$, una regola di transizione fà si che
+$S \rightarrow (S \setminus l ) \cup r \Rightarrow l \subseteq S$.
+
+\begin{lstlisting}[caption=Regole che modellano l'invio e ricezione di un messaggio cifrato. Si assuma che le premesse \textit{Pk(pk)} e \textit{Sk(sk)} siano già presenti nello stato.,
+    label=cod:rule]
+rule send_cryptotext:
+    [ Fr(~nonce), !Pk(pk) ] // Premesse
+    --[ SendCrypt(~nonce) ]-> // Azione
+    [ Out(senc{~nonce}pk) ] // Conclusione
+
+rule send_cryptotext:
+    [ !Sk(sk), In(senc{m}pk(sk)) ] // Premesse
+    --[ ReceiveCrypto(m) ]-> // Azione
+    [] // Conclusione
+\end{lstlisting}
+
+Nell'esempio riportato (\autoref{cod:rule}), la prima regola viene applicata se nello stato è presente il fatto \textit{Pk(pk)} che,
+poiché indicata con il simbolo \textit{!}, non viene rimossa. \\
+Viene anche introdotta una variabile mai usata prima \textit{~nonce} tramite il termine speciale \textit{Fr}.
+Si aggiunge allo stato la conclusione \textit{Out(senc\{~nonce\}pk)}, cioè la nonce cifrata.
+La regola registra sulla traccia l'azione \textit{SendCrypt(~nonce)}. \\
+Successivamente è possibile applicare la regola \textit{send\_cryptotext}.
+Con la premessa \textit{Sk(sk)} si ha accesso alla chiave segreta in grado di decifrare il messaggio ricevuto dal canale,
+che viene poi registrato sulla traccia.
+
+\subsection{Lemma}
+I lemma sono delle affermazioni che modellano le proprietà che si vuole dimostrare il protocollo possieda.
+
+\begin{lstlisting}[caption=Lemma che modella la proprietà di segretezza del messaggio.,
+    label=cod:lemma]
+lemma secrecy:
+    "
+    not ( Ex m #i #j .
+            ReceiveCrypto(m) @ i
+            & K(m) @ j
+        )
+    "
+\end{lstlisting}
+
+Il lemma di esempio (\autoref{cod:lemma}) può essere letto come:
+\begin{quote}
+    Non esiste un messaggio $m$, e istanti \textit{\#i} e \textit{\#j}, tali che
+    si verifica l'evento \textit{ReceiveCrypto(m)} nell'istante  \textit{\#i}
+    e l'attaccante conosce il valore di $m$ nell'stante  \textit{\#j}.
+\end{quote}

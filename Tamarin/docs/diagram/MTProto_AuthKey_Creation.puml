@@ -1,4 +1,4 @@
-@startuml MtProto
+@startuml MtProto - AuthKey Creation
 
 skinparam Monochrome true
 skinparam Shadowing false
