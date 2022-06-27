@@ -1,0 +1,27 @@
+name: Latex CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "Tamarin/**"
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: xu-cheng/latex-action@v2
+        with:
+          working_directory: Tamarin/docs
+          root_file: index.tex
+          post_compile: mv index.pdf MTProto_Formal_Analysis.pdf
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: MTProto_Formal_Analysis.pdf
+          path: Tamarin/docs/MTProto_Formal_Analysis.pdf
