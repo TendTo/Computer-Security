@@ -72,13 +72,13 @@ rule c_2:
     in
     [ Fr(~nk), St_C_1(C, ~nc), !Pk($S, pkS), In(m1) ]
     --[ C_SolvePOW(~nc, ns, qp), C_GenerateNK(~nc, ns, ~nk) ]->
-    [ Out(m2), St_C_2(C, ~nc, ns, ~nk), !NK(~nk) ]
+    [ Out(m2), St_C_2(C, ~nc, ns, ~nk) ]
 
 /**
  * Il server:
  * - riceve <nc, ns, prod(q, p), pkS, {H(m2), m2}pkS>
  * - genera <N, a>
- * - calcola <ga> = <g^a mod p>, <tk> = <kdf(ns, nk)>
+ * - calcola <ga> = g^a mod p, <tk> = kdf(ns, nk)
  * - crea <p3> = <nc, ns, g, N, ga>
  * - restituisce <nc, ns, {H(p3), p3}tk>
  * SEMPLIFICAZIONE: rimosso il timestamp
@@ -95,14 +95,14 @@ rule s_2:
         m3 = <nc, ~ns, senc{h(p3), p3}tk>
     in
     [ Fr(~N), Fr(~a), !Sk(S, skS), St_S_1(S, nc, ~ns, q, p), In(m2) ]
-    --[ S_ReceivesNK(nc, ~ns, nk), S_GenerateTK(nc, ~ns, nk, tk), S_SendsDHParameters(nc, ~ns, ~N, ga) ]->
-    [ Out(m3), St_S_2(S, nc, ~ns, nk, ~a, tk), !TK(tk) ]
+    --[ S_GenerateTK(nc, ~ns, nk, tk), S_SendsDHParameters(nc, ~ns, ~N, ga) ]->
+    [ Out(m3), St_S_2(S, nc, ~ns, nk, ~a, tk) ]
 
 /**
  * Il client:
  * - riceve <nc, ns, {H(p3), p3}tk>
  * - genera <b>
- * - calcola <tk> = <kdf(ns, nk)>, <kas> = <ga^b>, <gb> = <g^b>
+ * - calcola <tk> = kdf(ns, nk), <kas> = ga^b, <gb> = g^b
  * - crea <p4> = <nc, ns, retry_id, gb>
  * - invia <nc, ns, {H(p4), p4}tk>
  */
@@ -124,32 +124,32 @@ rule c_3:
 /**
  * Il server:
  * - riceve <nc, ns, {H(p4), p4}tk>
- * - calcola <kas> = <gb^a>
- * - restituisce <nc, ns, H(nk)>
+ * - calcola <kas> = gb^a
+ * - restituisce <nc, ns, H(nk, kas, '1')>
  */
- rule s_3:
- let
-    kas = gb^~a
-    p4 = <nc, ~ns, '0', gb>
-    m4 = <nc, ~ns, senc{h(p4), p4}tk>
-    m5 = <nc, ~ns, h(nk)>
- in
- [ St_S_2(S, nc, ~ns, nk, ~a, tk), In(m4) ]
- --[ S_CreateKas(S, kas), S_DecryptTk(S, tk), S_Success(nc, ~ns, kas) ]->
- [ Out(m5) ]
+rule s_3:
+    let
+        kas = gb^~a
+        p4 = <nc, ~ns, '0', gb>
+        m4 = <nc, ~ns, senc{h(p4), p4}tk>
+        m5 = <nc, ~ns, h(nk, kas, '1')>
+    in
+    [ St_S_2(S, nc, ~ns, nk, ~a, tk), In(m4) ]
+    --[ S_Success(nc, ~ns, kas) ]->
+    [ Out(m5) ]
 
 /**
  * Il client:
- * - riceve <nc, ns, H(nk)>
+ * - riceve <nc, ns, H(nk, kas, '1')>
  * - verifica che <nk> sia corretto
  */
- rule c_4:
- let
-    m5 = <~nc, ns, h(~nk)>
- in
- [ St_C_3(C, ~nc, ns, ~nk, retry_id, kas), In(m5) ]
- --[ C_Success(~nc, ns, kas), C_SuccessSecrets(~nc, ns, ~nk) ]->
- [ ]
+rule c_4:
+    let
+        m5 = <~nc, ns, h(~nk, kas, '1')>
+    in
+    [ St_C_3(C, ~nc, ns, ~nk, retry_id, kas), In(m5) ]
+    --[ C_Success(~nc, ns, kas), C_SuccessSecrets(~nc, ns, ~nk) ]->
+    [ ]
 
 /************************
  * AUTHENTICATION
@@ -265,10 +265,9 @@ lemma secret_kas:
         & C_SuccessSecrets(nc, ns, nk) @ i
         ==> 
         // ... un attaccante non ha modo di conoscere kas
-        ( not ( Ex #k .
+        not ( Ex #k .
                 K(kas) @ k
             )
-        )
         | // ... a meno che non sia stato rivelato skS o nk
         ( Ex skS #k .
             RevealSkS(skS) @k
@@ -373,9 +372,18 @@ lemma can_create_tk:
         S_GenerateTK(nc, ns, nk, tk) @ i
         & C_GenerateTK(nc, ns, nk, tk) @ j
         & i < j
-        & not ( Ex #k .
+        & not ( ( Ex #k .
                     K(tk) @ k
               )
+              |
+              ( Ex skS #k .
+                RevealSkS(skS) @k
+              )
+              |
+              ( Ex #k .
+                  RevealNK(nk) @k
+              )
+        )
     "
 
 /**
@@ -385,13 +393,23 @@ lemma can_create_tk:
 lemma can_succede:
     exists-trace
     "
-    Ex nc ns kas #i #j .
+    Ex nc ns nk kas #i #j .
         C_Success(nc, ns, kas) @ i
+        & C_SuccessSecrets(nc, ns, nk) @ i
         & S_Success(nc, ns, kas) @ j
         & j < i
-        & not ( Ex #k .
+        & not ( ( Ex #k .
                     K(kas) @ k
               )
+              |
+              ( Ex skS #k .
+                RevealSkS(skS) @k
+              )
+              |
+              ( Ex #k .
+                  RevealNK(nk) @k
+              )
+        )
     "
 
 end
