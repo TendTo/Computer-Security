@@ -28,6 +28,7 @@ le criticità riscontrate nel protocollo sono state risolte con il rilascio dell
 Questa nuova versione ha superato diverse analisi volte a individuarne i punti deboli.
 I risultati ne hanno comprovato la robustezza sia dal punto di vista crittografico \cite{inp:mtproto-attacks}
 che dal punto di vista requisiti di sicurezza garantiti dal protocollo \cite{inp:mtproto-proverif}. \\
+Quest'ultimo lavoro, in particolare, è stato di grande ispirazione per questa relazione.
 
 Va sottolineato inoltre che tutte le specifiche del protocollo sono pubbliche.
 Ciò permette a chiunque di realizzare una propria versione del client in grado di interfacciarsi con tutti gli altri. \\
@@ -36,7 +37,7 @@ Ciò permette a chiunque di realizzare una propria versione del client in grado 
 
 \gls{mtproto} è un protocollo piuttosto complesso, ed è composto da molteplici sotto-protocolli, ciascuno con un compito specifico.
 Si va dall'autenticazione e lo scambio di chiavi fra client e server, alla creazione di chiavi di sessione fra due client
-al fine di realizzare una cifratura end-to-end, giusto per citare alcune funzioni previste. \\
+al fine di realizzare una cifratura \gls{e2e}, giusto per citare alcune funzioni previste. \\
 Volendola vedere più ad alto livello, client e server si scambiano dei messaggi all'interno di una sessione.
 La sessione è strettamente legata ad un dispositivo (o più precisamente, l'applicativo del dispositivo)
 e all'identificativo dell'utente, utilizzato per l'autenticazione. \\
@@ -60,10 +61,11 @@ I messaggi vengono poi cifrati e viene aggiunta un'intestazione che contiene un 
 
 \begin{figure}[!h]
     \includegraphics[width=\textwidth]{mtproto-msg-1.jpeg}
-    \caption{Struttura di un messaggio in \gls{mtproto} \cite{man:mtproto}} \label{fig:mtproto-message-1}
+    \caption{Struttura di un messaggio con client-server encryption in \gls{mtproto} \cite{man:mtproto}} \label{fig:mtproto-message-1}
 \end{figure}
 
 \subsection{Creazione della chiave di autorizzazione}
+\label{sec:auth-key}
 Il primo step previsto dal protocollo è la generazione della chiave di autorizzazione.
 Con questa il client è in grado di autenticarsi agli occhi del sever. \\
 La procedura si conclude con un \gls{dhe}, ed è così articolata (\autoref{fig:mtproto-sequence-auth}):
@@ -105,3 +107,45 @@ Questo può accadere, ad esempio, se l'hash della nuova chiave è già presente 
 Il protocollo assume che sia il client che il server verifichino la correttezza dei parametri utilizzati nelle primitive crittografiche.
 Eventuali valori che non rientrano negli intervalli definiti sono scartati immediatamente, facendo fallire il protocollo.
 
+\subsection{Chat segrete}
+Oltre alla comunicazione standard con un server, il client può anche comunicare con altri client, con la garanzia che i messaggio utilizzino \gls{e2e} encryption. \\
+La struttura dei messaggi è piuttosto complessa e differisce da quella riportata precedentemente (\autoref{fig:mtproto-message-2}). \\
+
+\begin{figure}[h]
+    \includegraphics[width=\textwidth]{mtproto-msg-2.jpeg}
+    \caption{Struttura di un messaggio con \gls{e2e} encryption in \gls{mtproto} \cite{man:mtproto}} \label{fig:mtproto-message-2}
+\end{figure}
+
+Perchè il protocollo sia in grado di garantire le proprità di sicurezza, è necessario verificare che la chiave prodotta sia condivisa dalle due parti.
+Proprio per questo l'app Telegram permette di visionare un valore prodotto dalla chiave segreta, ed invita l'utente ad assicurarsi che l'altro (\autoref{fig:encryption-key-visualization}).
+
+\begin{figure}[h]
+    \centering
+    \includegraphics{encryption-key-visualization.jpg}
+    \caption{Questa schermata permette agli utenti di confrontare la chiave condivisa per l'\gls{e2e} encryption \cite{que:secret-chat}} \label{fig:encryption-key-visualization}
+\end{figure}
+
+Il setup per ottenere la chiave condivisa consiste in un \gls{dhe} e si compone dei seguenti passaggi (\autoref{fig:mtproto-sequence-secret-chat}):
+
+\begin{enumerate}
+    \item $A$ invia una richiesta al server per ricevere dei parametri $g, p$ da usare nel \gls{dhe}
+    \item il server restituisce i parametri richiesti, e cifra il messaggio con la key di autenticazione $k_a$ che condivide con il server (\autoref{sec:auth-key})
+    \item $A$ genera un numero casuale $a$ e produce $g_a = g^a \mod p$. Invia al server la tripla $(id, B, g_a)$, cifrata con $k_a$ dove $id$ è un identificativo di sessione
+          appena generato e $B$ è il destinatario
+    \item il server inoltra la richiesta, aggiungendo il mittente ed usando la chiave corretta: $\{id, B, g_a\}k_a \Rightarrow \{id, A, B, g_a\}k_b$
+    \item $B$ riceve la richiesta. Se questa viene accettata, $B$ chiede al server gli stessi parametri pubblici $g, p$
+    \item il server restituisce a $B$ i parametri richiesti
+    \item $B$ genera un numero casuale $b$ e produce $g_b = g^b \mod p$. Calcola inoltre $k_{AB} = g_a^b$. Invia al server la tripla $(id, A, \mathcal{H}(k_{AB}))$, cifrata con $k_b$
+    \item il server inoltra la richiesta modificata a dovere ad $A$
+    \item $A$ calcola $k_{BA} = g_b^a$, assicurandosi che l'hash di $k_{BA}$ sia uguale a quello ricevuto nel messaggio
+    \item $A$ e $B$ utilizzano un canale esterno, come l'app di Telegram, per verificare che condividono la stessa chiave
+\end{enumerate}
+
+\subsubsection{Dettagli aggiuntivi}
+Tutti i messaggi che i due client scambiano con il server sono cifrati con la rispettiva chiave di autenticazione (\autoref{sec:auth-key}).
+La funzione hash $\mathcal{H}$ è SHA1.
+Tutti i parametri ottenuti dal server, quali $g, p, g_a \text{o} g_b$ sono controllati. Gli agenti si assicurano che rispettino determinate condizioni di sicurezza.
+Nello specifico, $1 < g, g_a, g_b < p - 1$, e $2^{2048-64} < g_a, g_b < p - 2^{2048-64}$, al fine di evitare di effettuare \gls{dhe} con parametri deboli. \\
+
+
+\include{diagram/MTProto_Secret_Chat}

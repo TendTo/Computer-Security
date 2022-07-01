@@ -20,8 +20,7 @@ Le uniche limitazioni imposte all'avversario sono relative alle ipotesi fatte in
 sulla bontà delle primitive crittografiche, che non possono essere violate. \\
 
 Al fine di rendere più verosimile il modello, vi sono delle regole artificiali che rivelano informazioni aggiuntive all'attaccante.
-Questo permette di valutare che abusi il protocollo è in grado di sopportare prima di 
-non garantire più la proprietà di sicurezza richiesta.
+Questo permette di valutare che abusi il protocollo è in grado di sopportare prima di non garantire più la proprietà di sicurezza richiesta.
 
 \subsection{Proprietà di sicurezza}
 Ogni sottosezione di \gls{mtproto} soddisfa uno specifico obiettivo.
@@ -240,5 +239,103 @@ lemma agreement_session:
         ( Ex #k .
             RevealNK(nk) @k
         )
+    "
+\end{lstlisting}
+
+\subsection{Secret chat}
+La verifica del protocollo per la creazione di Secret Chat dimostra in maniera formale le proprietà di sicurezza attese.
+
+\subsubsection{Authentication}
+
+\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+    vedere la stessa chiave, allora il primo ha effettivamente ricevuto un messaggio dal secondo.},
+    label=cod:lemma:auth_r]
+lemma auth_r:
+    "
+    All I R m #i .
+        // Se I riceve e accetta un messaggio dopo aver fatto la verifica via app...
+        I_AcceptMessageAfterCheck(I, R, m) @ i
+        ==>
+        ( Ex #j . 
+            // ... il messaggio è stato inviato da R...
+            R_SendMes(m) @ j
+        )
+        & // ... e nessun altro conosce il contenuto di m
+        not ( Ex #k . 
+                K(m) @ k 
+            ) 
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+    vedere la stessa chiave, allora il secondo ha effettivamente ricevuto un messaggio dal primo.},
+    label=cod:lemma:auth_i]
+lemma auth_i:
+    "
+    All I R m #i .
+        // Se R riceve e accetta un messaggio dopo aver fatto la verifica via app...
+        R_AcceptMessageAfterCheck(I, R, m) @ i
+        ==>
+        ( Ex #j . 
+            // ... il messaggio è stato inviato da I...
+            I_SendMes(m) @ j
+        )
+        & // ... e nessun altro conosce il contenuto di m
+        not ( Ex #k . 
+                K(m) @ k 
+            ) 
+    "
+\end{lstlisting}
+
+\subsubsection{Secrecy}
+
+\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+    vedere la stessa chiave, allora questa è nota solo a loro.},
+    label=cod:lemma:secret_kir]
+lemma secret_kir:
+    "
+    All I R kir #i #j .
+        // Se entrambi gli agenti hanno effettuato la verifica via app...
+        (   I_AppCheck(I, R, kir) @ i
+            &
+            R_AppCheck(I, R, kir) @ j
+        )
+        ==>
+        // ... nessun altro conosce kir
+        not ( Ex #k . 
+                K(kir) @ k 
+            )
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+    vedere la stessa chiave, l'avversario non è in grado di decifrare messaggi.},
+    label=cod:lemma:secret_m]
+lemma secret_m:
+    "
+    All I R m #i .
+        // Se I riceve e accetta un messaggio dopo aver fatto la verifica via app...
+        I_AcceptMessageAfterCheck(I, R, m) @ i
+        ==>
+        // ... nessun altro conosce il contenuto di m
+        not ( Ex #k . 
+                K(m) @ k 
+            )
+    "
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Se gli utenti non hanno confermato tramite l'applicazione di 
+    vedere la stessa chiave, un attaccante potrebbe aver impersonato uno degli agenti. Questo lemma è falso.},
+    label=cod:lemma:secret_m_no_check]
+lemma secret_m_no_check:
+    "
+    All I R m #i .
+        // Se I riceve e accetta un messaggio senza aver fatto la verifica via app...
+        I_AcceptMessageNoCheck(I, R, m) @ i
+        ==>
+        // ... nessun altro conosce il contenuto di m
+        not ( Ex #k.
+                 K(m) @ k 
+            )
     "
 \end{lstlisting}
