@@ -1,0 +1,612 @@
+
+/*
+ *  Author: TendTo
+ *  Model Name: MTProto v2.0 - Creating an Authorization Key
+ *  Status: WORKING
+ */
+
+theory MTProto_AuthKey_Creation_CURRENT
+begin
+
+builtins: hashing, asymmetric-encryption, symmetric-encryption, diffie-hellman
+functions: prod/2, kdf/2
+equations: prod(q, p) = <q, p>
+
+// Generazione di un nuovo pario di chiavi asimmetriche. La chiave pubblica è nota a tutti
+rule generate_key_pair:
+    [ Fr(~skN) ]
+    -->
+    [ Out( pk(~skN)), !Sk($A, ~skN), !Pk($A,  pk(~skN)) ]
+
+// // Viene rivelata la chiave segreta del server
+rule reveal_skS:
+    [ !Sk($S, ~skS) ]
+    --[ RevealSkS(~skS) ]->
+    [ Out(~skS) ]
+
+// // Viene rivelata la nonce segreta nk usata per generare tk
+rule reveal_nk:
+    [ !NK(nk) ]
+    --[ RevealNK(nk) ]->
+    [ Out(nk) ]
+
+/**
+ * Il client:
+ * - genera <nc>
+ * - invia <nc>
+ */
+rule c_1:
+    [ Fr(~nc) ]
+    --[ C_Start(~nc) ]->
+    [ Out(~nc), St_C_1($C, ~nc) ]
+
+/**
+ * Il server:
+ * - riceve <nc>
+ * - genera <p, q, ns>
+ * - restituisce <nc, ns, qp, [pk_i]>.
+ * SEMPLIFICAZIONE: la lista contiene solo una chiave pubblica invece che molteplici fingerprint del server.
+ */
+rule s_1:
+    let
+        qp = prod($q, $p)
+        m1 = <nc, ~ns, prod($q, $p), pkS>
+    in
+    [ Fr(~ns), !Pk($S, pkS), In(nc) ]
+    --[ S_AcceptStart(nc, ~ns, pkS), S_SendPOW(nc, ~ns, qp) ]->
+    [ Out(m1), St_S_1($S, nc, ~ns, $q, $p) ]
+
+/**
+ * Il client:
+ * - riceve <nc, ns, prod(q, p), pkS>
+ * - genera <nk>
+ * - crea <p2> = <nc, ns, nk, q, p, prod(q, p), pkS>
+ * - invia <nc, ns, q, p, pkS, {H(p2), p2}pkS>
+ */
+rule c_2:
+    let
+        qp = prod(q, p)
+        m1 = <~nc, ns, <q, p>, pkS>
+        p2 = <~nc, ns, ~nk, q, p, qp, pkS>
+        m2 = <~nc, ns, q, p, pkS, aenc{h(p2), p2}pkS>
+    in
+    [ Fr(~nk), St_C_1(C, ~nc), !Pk(S, pkS), In(m1) ]
+    --[ C_SolvePOW(~nc, ns, qp), C_GenerateNK(~nc, ns, ~nk) ]->
+    [ Out(m2), St_C_2(C, ~nc, ns, ~nk), !NK(~nk) ]
+
+/**
+ * Il server:
+ * - riceve <nc, ns, prod(q, p), pkS, {H(m2), m2}pkS>
+ * - genera <N, a>
+ * - calcola <ga> = g^a mod p, <tk> = kdf(ns, nk)
+ * - crea <p3> = <nc, ns, g, N, ga>
+ * - restituisce <nc, ns, {H(p3), p3}tk>
+ * SEMPLIFICAZIONE: rimosso il timestamp
+ */
+rule s_2:
+    let
+        pkS = pk(skS)
+        ga = 'g'^~a
+        qp = prod(q, p)
+        p2 = <nc, ~ns, nk, q, p, qp, pkS>
+        m2 = <nc, ~ns, q, p, pkS, aenc{h(p2), p2}pkS>
+        tk = kdf(~ns, nk)
+        p3 = <nc, ~ns, 'g', ~N, ga>
+        m3 = <nc, ~ns, senc{h(p3), p3}tk>
+    in
+    [ Fr(~N), Fr(~a), !Sk(S, skS), St_S_1(S, nc, ~ns, q, p), In(m2) ]
+    --[ S_GenerateTK(nc, ~ns, nk, tk), S_SendsDHParameters(nc, ~ns, ~N, ga) ]->
+    [ Out(m3), St_S_2(S, nc, ~ns, nk, ~a, tk, '0') ]
+
+/**
+ * Il client:
+ * - riceve <nc, ns, {H(p3), p3}tk>
+ * - genera <b>
+ * - calcola <tk> = kdf(ns, nk), <kas> = ga^b, <gb> = g^b
+ * - crea <p4> = <nc, ns, retry_id, gb>
+ * - invia <nc, ns, {H(p4), p4}tk>
+ */
+rule c_3:
+    let
+        gb = 'g'^~b
+        kas = ga^~b
+        tk = kdf(ns, ~nk)
+        p3 = <~nc, ns, 'g', N, ga>
+        m3 = <~nc, ns, senc{h(p3), p3}tk>
+        p4 = <~nc, ns, '0', gb>
+        m4 = <~nc, ns, senc{h(p4), p4}tk>
+    in
+    [ Fr(~b), St_C_2(C, ~nc, ns, ~nk), In(m3) ]
+    --[ C_GenerateTK(~nc, ns, ~nk, tk), C_CreateKas(~nc, ns, kas), C_ReceivesDHParameters(~nc, ns, N, ga) ]->
+    [ Out(m4), St_C_3(C, ~nc, ns, ~nk, ga, kas) ]
+
+/**
+ * Il server:
+ * - riceve <nc, ns, {H(p4), p4}tk>
+ * - calcola <kas> = gb^a
+ * - restituisce <nc, ns, H(nk, kas, '1')>
+ */
+rule s_3:
+    let
+        kas = gb^~a
+        p4 = <nc, ~ns, retry_id, gb>
+        m4 = <nc, ~ns, senc{h(p4), p4}tk>
+        m5 = <nc, ~ns, h(nk, kas, '1')>
+    in
+    [ St_S_2(S, nc, ~ns, nk, ~a, tk, retry_id), In(m4) ]
+    --[ S_Success(nc, ~ns, kas) ]->
+    [ Out(m5) ]
+
+/**
+ * [Collisione KAS, messaggio di retry] Il server:
+ * - riceve <nc, ns, {H(p4), p4}tk>
+ * - calcola <kas> = gb^a
+ * - restituisce <nc, ns, H(nk, kas, '2')>
+ */
+rule s_3_retry:
+    let 
+        kas = gb^~a
+        p4 = <nc, ~ns, retry_id, gb>
+        m4 = <nc, ~ns, senc{h(p4), p4}tk>
+        m5 = <nc, ~ns, h(nk, kas, '2')>
+    in
+    [ St_S_2(S, nc, ~ns, nk, ~a, tk, retry_id), In(m4) ]
+    --[ S_Retry(nc, ~ns, nk, kas), S_RetrySecrets(nc, ~ns, nk) ]->
+    [ St_S_2(S, nc, ~ns, nk, ~a, tk, h(kas)), Out(m5) ]
+
+/**
+ * Il client:
+ * - riceve <nc, ns, H(nk, kas, '1')>
+ * - verifica che l'hash sia corretto
+ */
+rule c_4:
+    let
+        m5 = <~nc, ns, h(~nk, kas, '1')>
+    in
+    [ St_C_3(C, ~nc, ns, ~nk, ga, kas), In(m5) ]
+    --[ C_Success(~nc, ns, kas), C_SuccessSecrets(~nc, ns, ~nk) ]->
+    [ ]
+
+/**
+ * [Collisione KAS, messaggio di retry] Il client:
+ * - riceve <nc, ns, H(nk, kas, '2')>
+ * - verifica che l'hash sia corretto
+ * - calcola <new_kas> = gb^a
+ * - crea <p4> = <nc, ns, retry_id, gb>
+ * - invia <nc, ns, {H(p4), p4}tk>
+ */
+rule c_4_retry:
+    let
+        gb = 'g'^~b
+        new_kas = ga^~b
+        tk = kdf(ns, ~nk)
+        p4 = <~nc, ns, h(kas), gb>
+        m4 = <~nc, ns, senc{h(p4), p4}tk>
+        m5 = <~nc, ns, h(~nk, kas, '2')>
+    in
+    [ Fr(~b), St_C_3(C, ~nc, ns, ~nk, ga, kas), In(m5) ]
+    --[  C_Retry(~nc, ns, kas, new_kas), C_RetrySecrets(~nc, ns, ~nk) ]->
+    [ St_C_3(C, ~nc, ns, ~nk, ga, new_kas), Out(m4) ]
+
+
+/************************
+ * RESTRICT
+ ************************/
+// restriction is_null:
+//     "
+//     All x #i . IsNull(x, x) @ i ==> x = x 
+//     "
+
+
+/************************
+ * REUSE
+ ************************/
+/**
+ * Se un server sta rispondendo al client con un messaggio di 'retry',
+ * è stato lui ad inviare precedentemente il messaggio con i parametri per lo scambio
+ * di chiavi, a meno che l'avversario non sia a conoscenza della nonce nk.
+ * PROVATO: SI
+ */
+lemma s_3_to_s_4_retry [reuse,use_induction]:
+    "
+    All nc ns nk kas #i .
+        // Se S invia un messaggio di 'retry'...
+        S_Retry(nc, ns, nk, kas) @ i
+        ==>
+        ( Ex N ga #j . 
+            // ... aveva inviato in precedenza un messaggio con i parametri per lo scambio di chiavi...
+            S_SendsDHParameters(nc, ns, N, ga) @ j
+            & j < i
+        )
+        |
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+
+/**
+ * Se un client ha ricevuto un messaggio di 'retry',
+ * ha ricevuto precedentemente i parametri per il dhe,
+ * a meno che l'avversario non sia a conoscenza della nonce nk.
+ * PROVATO: SI
+ */
+lemma c_3_to_c_4_retry [reuse,use_induction]:
+    "
+    All nc ns nk kas new_kas #i .
+        // Se C ha ricevuto un messaggio di 'retry'...
+        C_Retry(nc, ns, kas, new_kas) @ i
+        &  C_RetrySecrets(nc, ns, nk) @ i
+        ==>
+        ( Ex N ga #j .
+            // ... aveva effettuato un primo tentativo di invio di chiave con il server ... 
+            C_ReceivesDHParameters(nc, ns, N, ga) @ j
+            & j < i
+        )
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+
+/**
+ * Se il client genera nk in una sessione identificata da nc ed ns,
+ * nk è unico
+ * PROVATO: SI
+ */
+lemma same_nk [reuse,use_induction]:
+    "
+    All nc ns nk1 nk2 #i #j .
+        // Se viene generato nk1 ed nk2 in una sessione con nc ed ns...
+        C_GenerateNK(nc, ns, nk1) @ i
+        & C_GenerateNK(nc, ns, nk2) @ j
+        ==>
+        // ... nk è lo stesso
+        nk1 = nk2
+        | // ... a meno che non sia stato rivelato skS o una delle due nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        | 
+        ( Ex #k .
+            RevealNK(nk1) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk2) @k
+        )
+    "
+
+/**
+ * Se il client genera nk in una sessione identificata da nc ed ns,
+ * nk è unico ???
+ * PROVATO: NO
+ * PROBLEMA: va in recorsione infinita per il fatto che una regole 'c_4_retry' 
+ * può produrre un'altra 'c_4_retry', e fa in modo che questa possa generare
+ * qualsiasi cosa 
+ */
+lemma secret_nk_retry [reuse,use_induction]:
+    "
+    All nc ns nk kas new_kas #i .
+        C_Retry(nc, ns, kas, new_kas) @ i
+        &  C_RetrySecrets(nc, ns, nk) @ i
+        ==>
+        not ( Ex #k .
+            K(nk) @k
+        )
+        |
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
+
+/************************
+ * AUTHENTICATION
+ ************************/
+
+/**
+ * Non vi è autenticazione del client per il server.
+ * Anche un attaccante può iniziare una sessione del protocollo.
+ * RISULTATO ATTESO: FALSO
+ */
+lemma client_auth:
+    "
+    All nc ns pkS #i .
+        S_AcceptStart(nc, ns, pkS) @ i
+        ==>
+        Ex #j . 
+            C_Start(nc) @ j
+            & j < i
+    "
+
+/**
+ * Se il client ha ricevuto i parametri relativi a DHE, è stato il server ad inviarli,
+ * a meno di un leak della chiave segreta del server, della nonce nk o della chiave temporanea tk.
+ */
+ lemma auth_dh:
+ "
+ All nc ns nk N ga tk #i .
+     // Se C ha ricevuto i parametri relativi a DHE,
+     // che ha decifrato con tk...
+     C_ReceivesDHParameters(nc, ns, N, ga) @ i
+     & C_GenerateTK(nc, ns, nk, tk) @ i
+     ==>
+     ( Ex #j .
+         // ... è stato S a inviarli...
+         S_SendsDHParameters(nc, ns, N, ga) @ j
+         & j < i
+     )
+     | // ... a meno che non sia stato rivelato skS o nk
+     ( Ex skS #k .
+         RevealSkS(skS) @k
+     )
+     |
+     ( Ex #k .
+         RevealNK(nk) @k
+     )
+ "
+
+/**
+* Se il protocollo si è concluso con successo, il client e il server hanno entrambi portato 
+* a termine il protollo
+*/
+lemma success_auth [use_induction]:
+ "
+ All nc ns nk kas #i .
+     // Se C ha completato con successo il protocollo, ottenendo kas...
+     C_Success(nc, ns, kas) @ i
+     & C_SuccessSecrets(nc, ns, nk) @ i
+     ==>
+     ( Ex #j .
+         // ... anche S è giunto alla stessa conclusione
+         S_Success(nc, ns, kas) @ j
+         & j < i
+     )
+     | // ... a meno che non sia stato rivelato skS o nk
+     ( Ex skS #k .
+         RevealSkS(skS) @k
+     )
+     |
+     ( Ex #k .
+         RevealNK(nk) @k
+     )
+ "
+
+/************************
+* SECRECY
+************************/
+
+/**
+* Se la chiave privata del server non è compromessa e non è rivelata per errore,
+* l'avversario non arriva a conoscere la nonce nk condivisa
+* fra C ed S.
+*/
+lemma secret_nk:
+ "
+ All nc ns nk #i .
+     // Se C genera nk...
+     C_GenerateNK(nc, ns, nk) @ i
+     ==> 
+     // ... l'avversario non ha modo di conoscere il suo valore
+     ( not   ( Ex #k .
+                 K(nk) @ k
+             )
+     )
+     | // ... a meno che non sia stato rivelato skS o nk
+     ( Ex skS #k .
+         RevealSkS(skS) @k
+     )
+     | 
+     ( Ex #k .
+         RevealNK(nk) @k
+     )
+ "
+
+/**
+* Se il client e il server hanno ottenuto una chiave condivisa kas,
+* sono i soli a conoscerla.
+*/
+lemma secret_kas:
+ "
+ All nc ns nk kas #i .
+     // Se C ha completato con successo il protocollo, ottenendo kas...
+     C_Success(nc, ns, kas) @ i
+     & C_SuccessSecrets(nc, ns, nk) @ i
+     ==> 
+     // ... un attaccante non ha modo di conoscere kas
+     not ( Ex #k .
+             K(kas) @ k
+         )
+     | // ... a meno che non sia stato rivelato skS o nk
+     ( Ex skS #k .
+         RevealSkS(skS) @k
+     )
+     |
+     ( Ex #k .
+         RevealNK(nk) @k
+     )
+ "
+
+/**
+* Se il client e il server hanno ottenuto una chiave condivisa kas,
+* sono i soli a conoscerla.
+* Questa rimane sicura anche se avvengono dei leak a posteriori di informazioni segrete,
+* garantendo forward secrecy, purchè ciò avvenga dopo il quarto messaggio del protocollo.
+*/
+lemma secret_kas_leaks:
+ "
+ All nc ns nk tk kas #i .
+     // Se C ha generato kas...
+     C_CreateKas(nc, ns, kas) @ i
+     & C_GenerateTK(nc, ns, nk, tk) @ i
+     ==> 
+     // ... un attaccante non ha modo di conoscere kas
+     not ( Ex #k .
+             K(kas) @ k
+         )
+     | // ... a meno che non sia stato rivelato skS o nk prima del quarto messaggio
+     ( Ex skS #k .
+         RevealSkS(skS) @k
+         & k < i
+     )
+     |
+     ( Ex #k .
+         RevealNK(nk) @k
+         & k < i
+     )
+ "
+
+/************************
+* INTEGRITY
+************************/
+/**
+* Se il client e il server hanno ottenuto una chiave condivisa kas nella 
+* stessa sessione, questa è uguale per entrambi
+*/
+lemma agreement_kas [use_induction]:
+ "
+ All nc ns nk c_kas s_kas #i #j .
+     // Se C e S hanno completato con successo il protocollo, ottenendo c_kas e s_kas...
+     C_Success(nc, ns, c_kas) @ i
+     & C_SuccessSecrets(nc, ns, nk) @ i
+     & S_Success(nc, ns, s_kas) @ j
+     ==>
+     // ... le due chiavi ottenute coincidono
+     c_kas = s_kas
+     | // ... a meno che non sia stato rivelato skS o nk
+     ( Ex skS #k .
+         RevealSkS(skS) @k
+     )
+     |
+     ( Ex #k .
+         RevealNK(nk) @k
+     )
+ "
+
+/**
+* Se il client e il server hanno ottenuto una stessa chiave condivisa kas,
+* è perchè stanno partecipendo alla medesima sessione
+*/
+lemma agreement_session [use_induction]:
+ "
+ All c_nc c_ns s_nc s_ns nk kas #i #j .
+     // Se C e S hanno ottenuto la stessa chiave kas...
+     C_Success(c_nc, c_ns, kas) @ i
+     & C_SuccessSecrets(c_nc, c_ns, nk) @ i
+     & S_Success(s_nc, s_ns, kas) @ j
+     ==>
+     // ... partecipavano allo stesso protocollo
+     c_nc = s_nc & c_ns = s_ns
+     | // ... a meno che non sia stato rivelato skS o nk
+     ( Ex skS #k .
+         RevealSkS(skS) @k
+     )
+     |
+     ( Ex #k .
+         RevealNK(nk) @k
+     )
+ "
+/************************
+* SANITY CHECK
+************************/
+
+/**
+* Il protocollo può creare una chiave temporanea tk
+* nota solo a C ed S.
+*/
+lemma can_create_tk:
+ exists-trace
+ "
+ Ex nc ns nk tk #i #j .
+     S_GenerateTK(nc, ns, nk, tk) @ i
+     & C_GenerateTK(nc, ns, nk, tk) @ j
+     & i < j
+     & not ( ( Ex #k .
+                 K(tk) @ k
+           )
+           |
+           ( Ex skS #k .
+             RevealSkS(skS) @k
+           )
+           |
+           ( Ex #k .
+               RevealNK(nk) @k
+           )
+     )
+ "
+
+/**
+* Il protocollo può avere successo.
+* C ed S hanno creato una chiave condivisa nota solo a loro due
+*/
+lemma can_succede:
+ exists-trace
+ "
+ Ex nc ns nk kas #i #j .
+     C_Success(nc, ns, kas) @ i
+     & C_SuccessSecrets(nc, ns, nk) @ i
+     & S_Success(nc, ns, kas) @ j
+     & j < i
+     & not ( ( Ex #k .
+                 K(kas) @ k
+           )
+           |
+           ( Ex skS #k .
+             RevealSkS(skS) @k
+           )
+           |
+           ( Ex #k .
+               RevealNK(nk) @k
+           )
+     )
+ "
+
+/**
+* Il protocollo può avere successo.
+* C ed S hanno creato una chiave condivisa nota solo a loro due
+*/
+lemma can_succede_retry:
+    exists-trace
+    "
+    Ex nc ns nk kas old_kas #i.
+        C_Retry(nc, ns, old_kas, kas) @ i
+        &  C_RetrySecrets(nc, ns, nk) @ i
+    "
+// lemma can_succede_retry:
+//     exists-trace
+//     "
+//     Ex nc ns nk old_kas kas a b c #i #j #m #n.
+//         C_Success(nc, ns, kas) @ i
+//         & C_SuccessSecrets(nc, ns, nk) @ i
+//         & S_Success(nc, ns, a) @ j
+//         & C_Retry(nc, ns, old_kas, b) @ m
+//         & S_Retry(nc, ns, nk, c) @ n
+//         & j < i
+//         & m < j
+//         & n < m
+//         & not ( ( Ex #k .
+//                     K(kas) @ k
+//             )
+//             |
+//             ( Ex skS #k .
+//                 RevealSkS(skS) @k
+//             )
+//             |
+//             ( Ex #k .
+//                 RevealNK(nk) @k
+//             )
+//         )
+//     "
+
+end
