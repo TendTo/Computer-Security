@@ -81,7 +81,12 @@ label=cod:lemma:agreement_kas,linerange={317-335}]{../mtproto/MTProto_AuthKey_Cr
 label=cod:lemma:agreement_session,linerange={341-359}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
 \subsection{Secret chat}
-La verifica del protocollo per la creazione di Secret Chat dimostra in maniera formale le proprietà di sicurezza attese.
+Il protocollo originale delle chat segrete prevede che i due client utilizzino la chiave di autenticazione a lungo termine (\autoref{sec:auth-key}) che condividono con il server
+per poter comunicare fra di loro, con il server che ne assicura l'autenticazione. \\
+Nell'ipotesi che la chiave condivisa non sia compromessa e che il server non sia colluso, il protocollo è banalmente sicuro. \\
+Per rendere l'analisi utile ed interessante, i messaggi di entrambi i client non sono cifrati con le chiavi di autenticazione.
+Al contrario, sono trasmessi nel canale in plaintext. \\
+Nonostante ciò, la verifica del protocollo per la creazione di Secret Chat dimostra in maniera formale le proprietà di sicurezza attese. \\
 
 \subsubsection{Authentication}
 

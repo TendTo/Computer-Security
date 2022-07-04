@@ -1,0 +1,8 @@
+\section{Conclusione}
+L'analisi formale effettuata con \gls{tamarin} rappresenta un'ulteriore conferma della bontà del protocollo \gls{mtproto}.
+I risultati ricalcano fedelmente quelli ottenuti dall'analisi formale realizzata con ProVerif \cite{book:proverif} \cite{inp:mtproto-proverif}. \\
+
+Si noti tuttavia che le normali chat di Telegram non presentano cifratura \gls{e2e}, e sono quindi consultabili da chi ottenga la chiave di autenticazione
+a lungo termine. Ciò include il server. \\
+Al contrario, le chat segrete realizzano un canale di comunicazione in grado di garantire la segretezza dei messaggi, a patto che gli utenti abbiano
+l'accortezza di verificare che il protocollo sia andato a buon fine consultando vicendevolmente l'apposita schermata dell'app.
