@@ -41,301 +41,69 @@ La verifica del protocollo di creazione dell'Authorization Key dimostra in manie
 
 \subsubsection{Authentication}
 
-\begin{lstlisting}[caption=Il client non è autenticato agli occhi del server.
-    Anche un avversario può iniziare legittimamente il protocollo. Questo lemma è falso.,
-    label=cod:lemma:client_auth]
-lemma client_auth:
-    "
-    All nc ns pkS #i .
-        // Se S accetta l'inizio del protocollo...
-        S_AcceptStart(nc, ns, pkS) @ i
-        ==>
-        Ex #j . 
-            // ... C ha mandato il primo messaggio
-            C_Start(nc) @ j
-            & j < i
-    "
-\end{lstlisting}
+\lstinputlisting[caption=Il client non è autenticato agli occhi del server.
+Anche un avversario può iniziare legittimamente il protocollo. Questo lemma è falso.,
+label=cod:lemma:client_auth,linerange={163-171}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
-\begin{lstlisting}[caption={Se il client ha ricevuto i parametri relativi a DHE, è stato il server ad inviarli.},
-    label=cod:lemma:auth_dh]
-lemma auth_dh:
-    "
-    All nc ns nk N ga tk #i .
-        // Se C ha ricevuto i parametri relativi a DHE,
-        // che ha decifrato con tk...
-        C_ReceivesDHParameters(nc, ns, N, ga) @ i
-        & C_GenerateTK(nc, ns, nk, tk) @ i
-        ==>
-        ( Ex #j .
-            // ... li ha inviati S...
-            S_SendsDHParameters(nc, ns, N, ga) @ j
-            & j < i
-        )
-        | // ... a meno che non sia stato rivelato skS o nk
-        ( Ex skS #k .
-            RevealSkS(skS) @k
-        )
-        |
-        ( Ex #k .
-            RevealNK(nk) @k
-        )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se il client ha ricevuto i parametri relativi a DHE, è stato il server ad inviarli.},
+label=cod:lemma:auth_dh,linerange={177-198}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
-\begin{lstlisting}[caption={Se il protocollo si è concluso con successo, il client e il server hanno entrambi portato 
-    a termine il protollo},
-    label=cod:lemma:success_auth]
-lemma success_auth:
-    "
-    All nc ns nk kas #i .
-        // Se C ha completato con successo il protocollo, ottenendo kas...
-        C_Success(nc, ns, kas) @ i
-        & C_SuccessSecrets(nc, ns, nk) @ i
-        ==>
-        ( Ex #j .
-            // ... anche S ha raggiunto la stessa conclusione
-            S_Success(nc, ns, kas) @ j
-            & j < i
-        )
-        | // ... a meno che non sia stato rivelato skS o nk
-        ( Ex skS #k .
-            RevealSkS(skS) @k
-        )
-        |
-        ( Ex #k .
-            RevealNK(nk) @k
-        )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se il protocollo si è concluso con successo, il client e il server hanno entrambi portato 
+a termine il protollo},
+label=cod:lemma:success_auth,linerange={204-224}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
 \subsubsection{Secrecy e Forward Secrecy}
 
-\begin{lstlisting}[caption={Se la chiave privata del server non è compromessa e non è rivelata per errore,
-    l'avversario non arriva a conoscere la nonce nk condivisa
-    fra C ed S.},
-    label=cod:lemma:secret_nk]
-lemma secret_nk:
-    "
-    All nc ns nk #i .
-        // Se C genera nk...
-        C_GenerateNK(nc, ns, nk) @ i
-        ==> 
-        // ... l'avversario non ha modo di conoscere il suo valore
-        ( not   ( Ex #k .
-                    K(nk) @ k
-                )
-        )
-        | // ... a meno che non sia stato rivelato skS o nk
-        ( Ex skS #k .
-            RevealSkS(skS) @k
-        )
-        | 
-        ( Ex #k .
-            RevealNK(nk) @k
-        )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se la chiave privata del server non è compromessa e non è rivelata per errore,
+l'avversario non arriva a conoscere la nonce nk condivisa
+fra C ed S.},
+label=cod:lemma:secret_nk,linerange={235-254}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
-\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una chiave condivisa kas,
-    sono i soli a conoscerla.},
-    label=cod:lemma:secret_kas]
-lemma secret_kas:
-    "
-    All nc ns nk kas #i .
-        // Se C ha completato con successo il protocollo, ottenendo kas...
-        C_Success(nc, ns, kas) @ i
-        & C_SuccessSecrets(nc, ns, nk) @ i
-        ==> 
-        // ... un attaccante non ha modo di conoscere kas
-        ( not ( Ex #k .
-                K(kas) @ k
-            )
-        )
-        | // ... a meno che non sia stato rivelato skS o nk
-        ( Ex skS #k .
-            RevealSkS(skS) @k
-        )
-        |
-        ( Ex #k .
-            RevealNK(nk) @k
-        )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se il client e il server hanno ottenuto una chiave condivisa kas,
+sono i soli a conoscerla.},
+label=cod:lemma:secret_kas,linerange={260-279}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
-\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una chiave condivisa kas,
-    sono i soli a conoscerla.
-    Questa rimane sicura anche se avvengono dei leak a posteriori di informazioni segrete,
-    garantendo forward secrecy, purchè ciò avvenga dopo il quarto messaggio del protocollo.},
-    label=cod:lemma:secret_kas_leaks]
-lemma secret_kas_leaks:
-    "
-    All nc ns nk tk kas #i .
-        // Se C ha generato kas...
-        C_CreateKas(nc, ns, kas) @ i
-        & C_GenerateTK(nc, ns, nk, tk) @ i
-        ==> 
-        // ... un attaccante non ha modo di conoscere kas
-        not ( Ex #k .
-                K(kas) @ k
-            )
-        | // ... a meno che non sia stato rivelato skS o nk prima del quarto messaggio
-        ( Ex skS #k .
-            RevealSkS(skS) @k
-            & k < i
-        )
-        |
-        ( Ex #k .
-            RevealNK(nk) @k
-            & k < i
-        )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se il client e il server hanno ottenuto una chiave condivisa kas,
+sono i soli a conoscerla.
+Questa rimane sicura anche se avvengono dei leak a posteriori di informazioni segrete,
+garantendo forward secrecy, purchè ciò avvenga dopo il quarto messaggio del protocollo.},
+label=cod:lemma:secret_kas_leaks,linerange={287-308}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
 \subsubsection{Integrity}
 
-\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una chiave condivisa kas nella 
-    stessa sessione, questa è uguale per entrambi},
-    label=cod:lemma:agreement_kas]
-lemma agreement_kas:
-    "
-    All nc ns nk c_kas s_kas #i #j .
-        // Se C e S hanno completato con successo il protocollo, ottenendo c_kas e s_kas...
-        C_Success(nc, ns, c_kas) @ i
-        & C_SuccessSecrets(nc, ns, nk) @ i
-        & S_Success(nc, ns, s_kas) @ j
-        ==>
-        // ... le due chiavi ottenute coincidono
-        c_kas = s_kas
-        | // ... a meno che non sia stato rivelato skS o nk
-        ( Ex skS #k .
-            RevealSkS(skS) @k
-        )
-        |
-        ( Ex #k .
-            RevealNK(nk) @k
-        )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se il client e il server hanno ottenuto una chiave condivisa kas nella 
+stessa sessione, questa è uguale per entrambi},
+label=cod:lemma:agreement_kas,linerange={317-335}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
-\begin{lstlisting}[caption={Se il client e il server hanno ottenuto una stessa chiave condivisa kas,
-    è perchè stanno partecipendo alla medesima sessione},
-    label=cod:lemma:agreement_session]
-lemma agreement_session:
-    "
-    All c_nc c_ns s_nc s_ns nk kas #i #j .
-        // Se C e S hanno ottenuto la stessa chiave kas...
-        C_Success(c_nc, c_ns, kas) @ i
-        & C_SuccessSecrets(c_nc, c_ns, nk) @ i
-        & S_Success(s_nc, s_ns, kas) @ j
-        ==>
-        // ... partecipavano allo stesso protocollo
-        c_nc = s_nc & c_ns = s_ns
-        | // ... a meno che non sia stato rivelato skS o nk
-        ( Ex skS #k .
-            RevealSkS(skS) @k
-        )
-        |
-        ( Ex #k .
-            RevealNK(nk) @k
-        )
-    "
-\end{lstlisting}
+
+\lstinputlisting[caption={Se il client e il server hanno ottenuto una stessa chiave condivisa kas,
+è perchè stanno partecipendo alla medesima sessione},
+label=cod:lemma:agreement_session,linerange={341-359}]{../mtproto/MTProto_AuthKey_Creation.spthy}
 
 \subsection{Secret chat}
 La verifica del protocollo per la creazione di Secret Chat dimostra in maniera formale le proprietà di sicurezza attese.
 
 \subsubsection{Authentication}
 
-\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
-    vedere la stessa chiave, allora il primo ha effettivamente ricevuto un messaggio dal secondo.},
-    label=cod:lemma:auth_r]
-lemma auth_r:
-    "
-    All I R m #i .
-        // Se I riceve e accetta un messaggio dopo aver fatto la verifica via app...
-        I_AcceptMessageAfterCheck(I, R, m) @ i
-        ==>
-        ( Ex #j . 
-            // ... il messaggio è stato inviato da R...
-            R_SendMes(m) @ j
-        )
-        & // ... e nessun altro conosce il contenuto di m
-        not ( Ex #k . 
-                K(m) @ k 
-            ) 
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+vedere la stessa chiave, allora il primo ha effettivamente ricevuto un messaggio dal secondo.},
+label=cod:lemma:auth_r,linerange={121-135}]{../mtproto/MTProto_Secret_Chat.spthy}
 
-\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
-    vedere la stessa chiave, allora il secondo ha effettivamente ricevuto un messaggio dal primo.},
-    label=cod:lemma:auth_i]
-lemma auth_i:
-    "
-    All I R m #i .
-        // Se R riceve e accetta un messaggio dopo aver fatto la verifica via app...
-        R_AcceptMessageAfterCheck(I, R, m) @ i
-        ==>
-        ( Ex #j . 
-            // ... il messaggio è stato inviato da I...
-            I_SendMes(m) @ j
-        )
-        & // ... e nessun altro conosce il contenuto di m
-        not ( Ex #k . 
-                K(m) @ k 
-            ) 
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+vedere la stessa chiave, allora il secondo ha effettivamente ricevuto un messaggio dal primo.},
+label=cod:lemma:auth_i,linerange={141-155}]{../mtproto/MTProto_Secret_Chat.spthy}
+
 
 \subsubsection{Secrecy}
 
-\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
-    vedere la stessa chiave, allora questa è nota solo a loro.},
-    label=cod:lemma:secret_kir]
-lemma secret_kir:
-    "
-    All I R kir #i #j .
-        // Se entrambi gli agenti hanno effettuato la verifica via app...
-        (   I_AppCheck(I, R, kir) @ i
-            &
-            R_AppCheck(I, R, kir) @ j
-        )
-        ==>
-        // ... nessun altro conosce kir
-        not ( Ex #k . 
-                K(kir) @ k 
-            )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+vedere la stessa chiave, allora questa è nota solo a loro.},
+label=cod:lemma:secret_kir,linerange={164-177}]{../mtproto/MTProto_Secret_Chat.spthy}
 
-\begin{lstlisting}[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
-    vedere la stessa chiave, l'avversario non è in grado di decifrare messaggi.},
-    label=cod:lemma:secret_m]
-lemma secret_m:
-    "
-    All I R m #i .
-        // Se I riceve e accetta un messaggio dopo aver fatto la verifica via app...
-        I_AcceptMessageAfterCheck(I, R, m) @ i
-        ==>
-        // ... nessun altro conosce il contenuto di m
-        not ( Ex #k . 
-                K(m) @ k 
-            )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se entrambi gli utenti hanno confermato tramite l'applicazione di 
+vedere la stessa chiave, l'avversario non è in grado di decifrare messaggi.},
+label=cod:lemma:secret_m,linerange={183-193}]{../mtproto/MTProto_Secret_Chat.spthy}
 
-\begin{lstlisting}[caption={Se gli utenti non hanno confermato tramite l'applicazione di 
-    vedere la stessa chiave, un attaccante potrebbe aver impersonato uno degli agenti. Questo lemma è falso.},
-    label=cod:lemma:secret_m_no_check]
-lemma secret_m_no_check:
-    "
-    All I R m #i .
-        // Se I riceve e accetta un messaggio senza aver fatto la verifica via app...
-        I_AcceptMessageNoCheck(I, R, m) @ i
-        ==>
-        // ... nessun altro conosce il contenuto di m
-        not ( Ex #k.
-                 K(m) @ k 
-            )
-    "
-\end{lstlisting}
+\lstinputlisting[caption={Se gli utenti non hanno confermato tramite l'applicazione di 
+vedere la stessa chiave, un attaccante potrebbe aver impersonato uno degli agenti. Questo lemma è falso.},
+label=cod:lemma:secret_m_no_check,linerange={200-210}]{../mtproto/MTProto_Secret_Chat.spthy}

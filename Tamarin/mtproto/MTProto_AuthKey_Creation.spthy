@@ -70,7 +70,7 @@ rule c_2:
         p2 = <~nc, ns, ~nk, q, p, qp, pkS>
         m2 = <~nc, ns, q, p, pkS, aenc{h(p2), p2}pkS>
     in
-    [ Fr(~nk), St_C_1(C, ~nc), !Pk($S, pkS), In(m1) ]
+    [ Fr(~nk), St_C_1(C, ~nc), !Pk(S, pkS), In(m1) ]
     --[ C_SolvePOW(~nc, ns, qp), C_GenerateNK(~nc, ns, ~nk) ]->
     [ Out(m2), St_C_2(C, ~nc, ns, ~nk) ]
 
@@ -160,15 +160,15 @@ rule c_4:
  * Anche un attaccante può iniziare una sessione del protocollo.
  * RISULTATO ATTESO: FALSO
  */
-// lemma client_auth:
-//     "
-//     All nc ns pkS #i .
-//         S_AcceptStart(nc, ns, pkS) @ i
-//         ==>
-//         Ex #j . 
-//             C_Start(nc) @ j
-//             & j < i
-//     "
+lemma client_auth:
+    "
+    All nc ns pkS #i .
+        S_AcceptStart(nc, ns, pkS) @ i
+        ==>
+        Ex #j . 
+            C_Start(nc) @ j
+            & j < i
+    "
 
 /**
  * Se il client ha ricevuto i parametri relativi a DHE, è stato il server ad inviarli,
