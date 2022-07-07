@@ -32,8 +32,9 @@ Le regole di riscrittura si compongono di tre parti:
     \item \textbf{le conclusioni}, vengono aggiunte allo stato corrente del programma, sostituendo gli input
 \end{itemize}
 
-Più formalmente, dato uno stato $S$ le regole con forma $l \rightarrow [a] \rightarrow r$, una regola di transizione fà si che
-$S \rightarrow (S \setminus l ) \cup r \Rightarrow l \subseteq S$.
+Più formalmente, dato uno stato $S$ le regole con forma $l \rightarrow [a] \rightarrow r$, una regola di transizione applicabile, 
+per la quale tutte le premesse che la caratterizzano sono già nello stato corrente del programma, 
+fà si che $S \xrightarrow{\text{diventa}} (S \setminus l ) \cup r \Rightarrow l \subseteq S$.
 
 \begin{lstlisting}[caption=Regole che modellano l'invio e ricezione di un messaggio cifrato. Si assuma che le premesse \textit{Pk(pk)} e \textit{Sk(sk)} siano già presenti nello stato.,
     label=cod:rule]

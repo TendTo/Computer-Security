@@ -37,7 +37,10 @@ Nel complesso, l'intero protocollo dovrebbe garantire le seguenti proprietà:
 \end{itemize}
 
 \subsection{Authorization key protocol}
-La verifica del protocollo di creazione dell'Authorization Key dimostra in maniera formale le proprietà di sicurezza attese.
+La verifica del protocollo di creazione dell'Authorization Key dimostra in maniera formale le proprietà di sicurezza attese. \\
+Le regole \textit{reveal\_nk} e \textit{reveal\_skS} sono in grado di simulare un eventualità che queste informazioni confidenziali
+venga rivelata all'attaccante. 
+Includerle permette di dimostrare anche la proprietà di Forward Secrecy, di cui il protocollo gode sotto determinate ipotesi. 
 
 \subsubsection{Authentication}
 

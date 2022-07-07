@@ -100,7 +100,7 @@ Un avversario che voglia minare la disponibilità del sistema dovrebbe essere in
 proporzionale al numero di sessioni che si sta creando. \\
 Si può parlare di questa strategia come una proof of work semplificata. \\
 
-Il valore di retry\_id parte da 0 e diventa l'hash della chiave di autizzazione precedente qual ora il server
+Il valore di retry\_id parte da 0 e diventa l'hash della chiave di autorizzazione precedente qual ora il server
 richieda di rinegoziare le chiavi nella stessa sessione.
 Questo può accadere, ad esempio, se l'hash della nuova chiave è già presente nella lista di hash di chiavi registrate del server. \\
 
@@ -116,8 +116,8 @@ La struttura dei messaggi è piuttosto complessa e differisce da quella riportat
     \caption{Struttura di un messaggio con \gls{e2e} encryption in \gls{mtproto} \cite{man:mtproto}} \label{fig:mtproto-message-2}
 \end{figure}
 
-Perchè il protocollo sia in grado di garantire le proprità di sicurezza, è necessario verificare che la chiave prodotta sia condivisa dalle due parti.
-Proprio per questo l'app Telegram permette di visionare un valore prodotto dalla chiave segreta, ed invita l'utente ad assicurarsi che l'altro (\autoref{fig:encryption-key-visualization}).
+Affinché il protocollo sia in grado di garantire le proprietà di sicurezza, è necessario verificare che la chiave prodotta sia condivisa dalle due parti.
+Proprio per questo l'app Telegram permette di visionare un valore prodotto dalla chiave segreta, ed invita entrambi gli utenti ad assicurarsi che entrambi vedano la stessa chiave  (\autoref{fig:encryption-key-visualization}).
 
 \begin{figure}[h]
     \centering
