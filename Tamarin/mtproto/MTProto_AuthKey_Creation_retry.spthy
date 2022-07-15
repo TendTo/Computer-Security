@@ -161,10 +161,11 @@ rule s_3_retry:
  */
 rule c_4:
     let
+        kas = ga^b // Check per assicurarsi che kas appartenga al gruppo G
         m5 = <~nc, ns, h(~nk, kas, '1')>
     in
     [ St_C_3(C, ~nc, ns, ~nk, ga, kas), In(m5) ]
-    --[ C_Success(~nc, ns, kas), C_SuccessSecrets(~nc, ns, ~nk) ]->
+    --[ C_Success(~nc, ns, kas), C_SuccessSecrets(~nc, ns, ~nk), C_SuccessDH(~nc, ns, ga) ]->
     [ ]
 
 /**
@@ -178,6 +179,7 @@ rule c_4:
 rule c_4_retry:
     let
         gb = 'g'^~b
+        kas = ga^~b // Check per assicurarsi che kas appartenga al gruppo G
         new_kas = ga^~b
         tk = kdf(ns, ~nk)
         p4 = <~nc, ns, h(kas), gb>
@@ -185,7 +187,7 @@ rule c_4_retry:
         m5 = <~nc, ns, h(~nk, kas, '2')>
     in
     [ Fr(~b), St_C_3(C, ~nc, ns, ~nk, ga, kas), In(m5) ]
-    --[  C_Retry(~nc, ns, kas, new_kas), C_RetrySecrets(~nc, ns, ~nk) ]->
+    --[  C_Retry(~nc, ns, kas, new_kas), C_RetrySecrets(~nc, ns, ~nk), C_RetryDH(~nc, ns, ga, ~b) ]->
     [ St_C_3(C, ~nc, ns, ~nk, ga, new_kas), Out(m4) ]
 
 
@@ -201,6 +203,14 @@ rule c_4_retry:
 /************************
  * REUSE
  ************************/
+lemma c_4_retry_to_c3_dh [reuse,use_induction]:
+    "
+    All nc ns ga b #i .
+        C_RetryDH(nc, ns, ga, b) @ i
+        ==>
+        Ex N #j .
+            C_ReceivesDHParameters(nc, ns, N, ga) @ j
+    "
 /**
  * Se un server sta rispondendo al client con un messaggio di 'retry',
  * è stato lui ad inviare precedentemente il messaggio con i parametri per lo scambio
@@ -334,28 +344,28 @@ lemma client_auth:
  * Se il client ha ricevuto i parametri relativi a DHE, è stato il server ad inviarli,
  * a meno di un leak della chiave segreta del server, della nonce nk o della chiave temporanea tk.
  */
- lemma auth_dh:
- "
- All nc ns nk N ga tk #i .
-     // Se C ha ricevuto i parametri relativi a DHE,
-     // che ha decifrato con tk...
-     C_ReceivesDHParameters(nc, ns, N, ga) @ i
-     & C_GenerateTK(nc, ns, nk, tk) @ i
-     ==>
-     ( Ex #j .
-         // ... è stato S a inviarli...
-         S_SendsDHParameters(nc, ns, N, ga) @ j
-         & j < i
-     )
-     | // ... a meno che non sia stato rivelato skS o nk
-     ( Ex skS #k .
-         RevealSkS(skS) @k
-     )
-     |
-     ( Ex #k .
-         RevealNK(nk) @k
-     )
- "
+lemma auth_dh:
+    "
+    All nc ns nk N ga tk #i .
+        // Se C ha ricevuto i parametri relativi a DHE,
+        // che ha decifrato con tk...
+        C_ReceivesDHParameters(nc, ns, N, ga) @ i
+        & C_GenerateTK(nc, ns, nk, tk) @ i
+        ==>
+        ( Ex #j .
+            // ... è stato S a inviarli...
+            S_SendsDHParameters(nc, ns, N, ga) @ j
+            & j < i
+        )
+        | // ... a meno che non sia stato rivelato skS o nk
+        ( Ex skS #k .
+            RevealSkS(skS) @k
+        )
+        |
+        ( Ex #k .
+            RevealNK(nk) @k
+        )
+    "
 
 /**
 * Se il protocollo si è concluso con successo, il client e il server hanno entrambi portato 
